@@ -66,6 +66,8 @@ where
     rotation: Rotation,
     opacity: f32,
     status: Option<Status>,
+    alt: Option<String>,
+    description: Option<String>,
 }
 
 impl<'a, Theme> Svg<'a, Theme>
@@ -83,6 +85,8 @@ where
             rotation: Rotation::default(),
             opacity: 1.0,
             status: None,
+            alt: None,
+            description: None,
         }
     }
 
@@ -148,6 +152,24 @@ where
     /// and `1.0` meaning completely opaque.
     pub fn opacity(mut self, opacity: impl Into<f32>) -> Self {
         self.opacity = opacity.into();
+        self
+    }
+
+    /// Sets the alt text of the [`Svg`].
+    ///
+    /// This is the accessible name announced by screen readers. It should
+    /// be a short phrase describing the image content.
+    pub fn alt(mut self, text: impl Into<String>) -> Self {
+        self.alt = Some(text.into());
+        self
+    }
+
+    /// Sets an extended description of the [`Svg`].
+    ///
+    /// This supplements the alt text with additional context for
+    /// assistive technology, when the alt text alone is not sufficient.
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
         self
     }
 }
@@ -283,6 +305,8 @@ where
             layout.bounds(),
             &Accessible {
                 role: Role::Image,
+                label: self.alt.as_deref(),
+                description: self.description.as_deref(),
                 ..Accessible::default()
             },
         );

@@ -68,6 +68,8 @@ pub struct Image<Handle = image::Handle> {
     opacity: f32,
     scale: f32,
     expand: bool,
+    alt: Option<String>,
+    description: Option<String>,
 }
 
 impl<Handle> Image<Handle> {
@@ -85,6 +87,8 @@ impl<Handle> Image<Handle> {
             opacity: 1.0,
             scale: 1.0,
             expand: false,
+            alt: None,
+            description: None,
         }
     }
 
@@ -175,6 +179,24 @@ impl<Handle> Image<Handle> {
     /// of the [`Image`].
     pub fn border_radius(mut self, border_radius: impl Into<border::Radius>) -> Self {
         self.border_radius = border_radius.into();
+        self
+    }
+
+    /// Sets the alt text of the [`Image`].
+    ///
+    /// This is the accessible name announced by screen readers. It should
+    /// be a short phrase describing the image content.
+    pub fn alt(mut self, text: impl Into<String>) -> Self {
+        self.alt = Some(text.into());
+        self
+    }
+
+    /// Sets an extended description of the [`Image`].
+    ///
+    /// This supplements the alt text with additional context for
+    /// assistive technology, when the alt text alone is not sufficient.
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
         self
     }
 }
@@ -405,6 +427,8 @@ where
             layout.bounds(),
             &Accessible {
                 role: Role::Image,
+                label: self.alt.as_deref(),
+                description: self.description.as_deref(),
                 ..Accessible::default()
             },
         );
