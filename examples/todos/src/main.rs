@@ -51,7 +51,7 @@ enum Message {
     CreateTask,
     FilterChanged(Filter),
     TaskMessage(usize, TaskMessage),
-    TabPressed { shift: bool },
+
     ToggleFullscreen(window::Mode),
 }
 
@@ -146,13 +146,7 @@ impl Todos {
 
                         Command::none()
                     }
-                    Message::TabPressed { shift } => {
-                        if shift {
-                            operation::focus_previous()
-                        } else {
-                            operation::focus_next()
-                        }
-                    }
+
                     Message::ToggleFullscreen(mode) => {
                         window::latest().and_then(move |window| window::set_mode(window, mode))
                     }
@@ -249,9 +243,6 @@ impl Todos {
                 modifiers,
                 ..
             } => match (key, modifiers) {
-                (key::Named::Tab, _) => Some(Message::TabPressed {
-                    shift: modifiers.shift(),
-                }),
                 (key::Named::ArrowUp, keyboard::Modifiers::SHIFT) => {
                     Some(Message::ToggleFullscreen(window::Mode::Fullscreen))
                 }

@@ -70,17 +70,6 @@ impl App {
             }
             Message::Event(event) => match event {
                 Event::Keyboard(keyboard::Event::KeyPressed {
-                    key: keyboard::Key::Named(key::Named::Tab),
-                    modifiers,
-                    ..
-                }) => {
-                    if modifiers.shift() {
-                        operation::focus_previous()
-                    } else {
-                        operation::focus_next()
-                    }
-                }
-                Event::Keyboard(keyboard::Event::KeyPressed {
                     key: keyboard::Key::Named(key::Named::Escape),
                     ..
                 }) => {

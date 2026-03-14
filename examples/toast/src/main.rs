@@ -1,15 +1,10 @@
-use iced::event::{self, Event};
-use iced::keyboard;
-use iced::keyboard::key;
-use iced::widget::{button, center, column, operation, pick_list, row, slider, text, text_input};
-use iced::{Center, Element, Fill, Subscription, Task};
+use iced::widget::{button, center, column, pick_list, row, slider, text, text_input};
+use iced::{Center, Element, Fill, Task};
 
 use toast::{Status, Toast};
 
 pub fn main() -> iced::Result {
-    iced::application(App::default, App::update, App::view)
-        .subscription(App::subscription)
-        .run()
+    iced::application(App::default, App::update, App::view).run()
 }
 
 struct App {
@@ -27,7 +22,6 @@ enum Message {
     Body(String),
     Status(Status),
     Timeout(f64),
-    Event(Event),
 }
 
 impl App {
@@ -41,10 +35,6 @@ impl App {
             timeout_secs: toast::DEFAULT_TIMEOUT,
             editing: Toast::default(),
         }
-    }
-
-    fn subscription(&self) -> Subscription<Message> {
-        event::listen().map(Message::Event)
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
@@ -75,16 +65,6 @@ impl App {
                 self.timeout_secs = timeout as u64;
                 Task::none()
             }
-            Message::Event(Event::Keyboard(keyboard::Event::KeyPressed {
-                key: keyboard::Key::Named(key::Named::Tab),
-                modifiers,
-                ..
-            })) if modifiers.shift() => operation::focus_previous(),
-            Message::Event(Event::Keyboard(keyboard::Event::KeyPressed {
-                key: keyboard::Key::Named(key::Named::Tab),
-                ..
-            })) => operation::focus_next(),
-            Message::Event(_) => Task::none(),
         }
     }
 
