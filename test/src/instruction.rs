@@ -62,29 +62,41 @@ impl Interaction {
             }),
             Event::Keyboard(keyboard) => Self::Keyboard(match keyboard {
                 keyboard::Event::KeyPressed { key, text, .. } => match key {
-                    keyboard::Key::Named(keyboard::key::Named::Enter) => {
-                        Keyboard::Press(Key::Enter)
-                    }
-                    keyboard::Key::Named(keyboard::key::Named::Escape) => {
-                        Keyboard::Press(Key::Escape)
-                    }
-                    keyboard::Key::Named(keyboard::key::Named::Tab) => Keyboard::Press(Key::Tab),
-                    keyboard::Key::Named(keyboard::key::Named::Backspace) => {
-                        Keyboard::Press(Key::Backspace)
-                    }
+                    keyboard::Key::Named(named) => Keyboard::Press(match named {
+                        keyboard::key::Named::Enter => Key::Enter,
+                        keyboard::key::Named::Escape => Key::Escape,
+                        keyboard::key::Named::Tab => Key::Tab,
+                        keyboard::key::Named::Backspace => Key::Backspace,
+                        keyboard::key::Named::Space => Key::Space,
+                        keyboard::key::Named::ArrowUp => Key::ArrowUp,
+                        keyboard::key::Named::ArrowDown => Key::ArrowDown,
+                        keyboard::key::Named::ArrowLeft => Key::ArrowLeft,
+                        keyboard::key::Named::ArrowRight => Key::ArrowRight,
+                        keyboard::key::Named::Home => Key::Home,
+                        keyboard::key::Named::End => Key::End,
+                        keyboard::key::Named::PageUp => Key::PageUp,
+                        keyboard::key::Named::PageDown => Key::PageDown,
+                        _ => None?,
+                    }),
                     _ => Keyboard::Typewrite(text.as_ref()?.to_string()),
                 },
                 keyboard::Event::KeyReleased { key, .. } => match key {
-                    keyboard::Key::Named(keyboard::key::Named::Enter) => {
-                        Keyboard::Release(Key::Enter)
-                    }
-                    keyboard::Key::Named(keyboard::key::Named::Escape) => {
-                        Keyboard::Release(Key::Escape)
-                    }
-                    keyboard::Key::Named(keyboard::key::Named::Tab) => Keyboard::Release(Key::Tab),
-                    keyboard::Key::Named(keyboard::key::Named::Backspace) => {
-                        Keyboard::Release(Key::Backspace)
-                    }
+                    keyboard::Key::Named(named) => Keyboard::Release(match named {
+                        keyboard::key::Named::Enter => Key::Enter,
+                        keyboard::key::Named::Escape => Key::Escape,
+                        keyboard::key::Named::Tab => Key::Tab,
+                        keyboard::key::Named::Backspace => Key::Backspace,
+                        keyboard::key::Named::Space => Key::Space,
+                        keyboard::key::Named::ArrowUp => Key::ArrowUp,
+                        keyboard::key::Named::ArrowDown => Key::ArrowDown,
+                        keyboard::key::Named::ArrowLeft => Key::ArrowLeft,
+                        keyboard::key::Named::ArrowRight => Key::ArrowRight,
+                        keyboard::key::Named::Home => Key::Home,
+                        keyboard::key::Named::End => Key::End,
+                        keyboard::key::Named::PageUp => Key::PageUp,
+                        keyboard::key::Named::PageDown => Key::PageDown,
+                        _ => None?,
+                    }),
                     _ => None?,
                 },
                 keyboard::Event::ModifiersChanged(_) => None?,
@@ -375,8 +387,6 @@ impl fmt::Display for Keyboard {
 }
 
 /// A keyboard key.
-///
-/// Only a small subset of keys is supported currently!
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(missing_docs)]
 pub enum Key {
@@ -384,6 +394,15 @@ pub enum Key {
     Escape,
     Tab,
     Backspace,
+    Space,
+    ArrowUp,
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+    Home,
+    End,
+    PageUp,
+    PageDown,
 }
 
 impl From<Key> for keyboard::Key {
@@ -393,6 +412,15 @@ impl From<Key> for keyboard::Key {
             Key::Escape => Self::Named(keyboard::key::Named::Escape),
             Key::Tab => Self::Named(keyboard::key::Named::Tab),
             Key::Backspace => Self::Named(keyboard::key::Named::Backspace),
+            Key::Space => Self::Named(keyboard::key::Named::Space),
+            Key::ArrowUp => Self::Named(keyboard::key::Named::ArrowUp),
+            Key::ArrowDown => Self::Named(keyboard::key::Named::ArrowDown),
+            Key::ArrowLeft => Self::Named(keyboard::key::Named::ArrowLeft),
+            Key::ArrowRight => Self::Named(keyboard::key::Named::ArrowRight),
+            Key::Home => Self::Named(keyboard::key::Named::Home),
+            Key::End => Self::Named(keyboard::key::Named::End),
+            Key::PageUp => Self::Named(keyboard::key::Named::PageUp),
+            Key::PageDown => Self::Named(keyboard::key::Named::PageDown),
         }
     }
 }
@@ -435,6 +463,15 @@ mod format {
             Key::Escape => "escape",
             Key::Tab => "tab",
             Key::Backspace => "backspace",
+            Key::Space => "space",
+            Key::ArrowUp => "up",
+            Key::ArrowDown => "down",
+            Key::ArrowLeft => "left",
+            Key::ArrowRight => "right",
+            Key::Home => "home",
+            Key::End => "end",
+            Key::PageUp => "pageup",
+            Key::PageDown => "pagedown",
         }
     }
 
@@ -455,6 +492,8 @@ mod format {
 pub enum Expectation {
     /// Expect some element to contain some text.
     Text(String),
+    /// Expect a widget with the given text or id to have keyboard focus.
+    Focused(Target),
 }
 
 impl fmt::Display for Expectation {
@@ -462,6 +501,9 @@ impl fmt::Display for Expectation {
         match self {
             Expectation::Text(text) => {
                 write!(f, "expect {}", format::string(text))
+            }
+            Expectation::Focused(target) => {
+                write!(f, "expect focused {target}")
             }
         }
     }
@@ -571,9 +613,13 @@ mod parser {
     }
 
     fn expectation(input: &str) -> IResult<&str, Expectation> {
-        map(preceded(tag("expect "), string), |text| {
-            Expectation::Text(text)
-        })
+        alt((
+            map(
+                preceded(tag("expect focused "), target),
+                Expectation::Focused,
+            ),
+            map(preceded(tag("expect "), string), Expectation::Text),
+        ))
         .parse(input)
     }
 
@@ -583,6 +629,15 @@ mod parser {
             map(tag("escape"), |_| Key::Escape),
             map(tag("tab"), |_| Key::Tab),
             map(tag("backspace"), |_| Key::Backspace),
+            map(tag("space"), |_| Key::Space),
+            map(tag("up"), |_| Key::ArrowUp),
+            map(tag("down"), |_| Key::ArrowDown),
+            map(tag("left"), |_| Key::ArrowLeft),
+            map(tag("right"), |_| Key::ArrowRight),
+            map(tag("home"), |_| Key::Home),
+            map(tag("end"), |_| Key::End),
+            map(tag("pageup"), |_| Key::PageUp),
+            map(tag("pagedown"), |_| Key::PageDown),
         ))
         .parse(input)
     }

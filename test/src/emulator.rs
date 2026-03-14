@@ -377,6 +377,50 @@ impl<P: Program + 'static> Emulator<P> {
 
                     self.cache = Some(user_interface.into_cache());
                 }
+                instruction::Expectation::Focused(target) => {
+                    use crate::selector;
+                    use widget::Operation;
+
+                    let mut operation = selector::is_focused().find();
+
+                    user_interface.operate(
+                        &self.renderer,
+                        &mut widget::operation::black_box(&mut operation),
+                    );
+
+                    let focused_id = match operation.finish() {
+                        widget::operation::Outcome::Some(Some(focused)) => match focused {
+                            selector::Target::Focusable { id, .. }
+                            | selector::Target::TextInput { id, .. }
+                            | selector::Target::Container { id, .. }
+                            | selector::Target::Scrollable { id, .. }
+                            | selector::Target::Text { id, .. }
+                            | selector::Target::Custom { id, .. }
+                            | selector::Target::Accessible { id, .. } => id,
+                        },
+                        _ => None,
+                    };
+
+                    let found = match &target {
+                        instruction::Target::Id(id) => focused_id
+                            .as_ref()
+                            .is_some_and(|fid| *fid == widget::Id::from(id.to_owned())),
+                        instruction::Target::Text(_) => {
+                            // Text-based focus matching not supported;
+                            // use widget IDs for focus assertions
+                            false
+                        }
+                        instruction::Target::Point(_) => false,
+                    };
+
+                    if found {
+                        self.runtime.send(Event::Ready);
+                    } else {
+                        self.runtime.send(Event::Failed(instruction.clone()));
+                    }
+
+                    self.cache = Some(user_interface.into_cache());
+                }
             },
         }
     }
