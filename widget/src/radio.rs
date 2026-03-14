@@ -613,3 +613,21 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         },
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::widget::operation::focusable::Focusable;
+
+    type TestState = State<()>;
+
+    #[test]
+    fn focusable_trait() {
+        let mut state = TestState::default();
+        assert!(!state.is_focused());
+        state.focus();
+        assert!(state.is_focused());
+        state.unfocus();
+        assert!(!state.is_focused());
+    }
+}

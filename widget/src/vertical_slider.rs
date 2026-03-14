@@ -650,6 +650,22 @@ impl Catalog for Theme {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::widget::operation::focusable::Focusable;
+
+    #[test]
+    fn focusable_trait() {
+        let mut state = State::default();
+        assert!(!state.is_focused());
+        state.focus();
+        assert!(state.is_focused());
+        state.unfocus();
+        assert!(!state.is_focused());
+    }
+}
+
 /// The default style of a [`VerticalSlider`].
 pub fn default(theme: &Theme, status: Status) -> Style {
     let palette = theme.palette();

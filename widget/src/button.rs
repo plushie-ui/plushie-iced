@@ -842,3 +842,19 @@ fn disabled(style: Style) -> Style {
         ..style
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::widget::operation::focusable::Focusable;
+
+    #[test]
+    fn focusable_trait() {
+        let mut state = State::default();
+        assert!(!state.is_focused());
+        state.focus();
+        assert!(state.is_focused());
+        state.unfocus();
+        assert!(!state.is_focused());
+    }
+}
