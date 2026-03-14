@@ -257,12 +257,14 @@ impl ScrollableInfo {
         match action {
             ScrollAction::PageDown | ScrollAction::LineDown => self.translation.y < max_y - 0.5,
             ScrollAction::PageUp | ScrollAction::LineUp => self.translation.y > 0.5,
-            ScrollAction::LineRight => self.translation.x < max_x - 0.5,
-            ScrollAction::LineLeft => self.translation.x > 0.5,
+            ScrollAction::LineRight | ScrollAction::PageRight => self.translation.x < max_x - 0.5,
+            ScrollAction::LineLeft | ScrollAction::PageLeft => self.translation.x > 0.5,
             ScrollAction::Home => self.translation.y > 0.5 || self.translation.x > 0.5,
             ScrollAction::End => {
                 self.translation.y < max_y - 0.5 || self.translation.x < max_x - 0.5
             }
+            ScrollAction::ShiftHome => self.translation.x > 0.5,
+            ScrollAction::ShiftEnd => self.translation.x < max_x - 0.5,
         }
     }
 }
@@ -459,6 +461,14 @@ pub enum ScrollAction {
     Home,
     /// Scroll to the end.
     End,
+    /// Scroll left by viewport width (Shift+Page Up).
+    PageLeft,
+    /// Scroll right by viewport width (Shift+Page Down).
+    PageRight,
+    /// Scroll to horizontal start (Shift+Home).
+    ShiftHome,
+    /// Scroll to horizontal end (Shift+End).
+    ShiftEnd,
 }
 
 /// Result from phase 1 of [`scroll_focused_ancestor`].
@@ -543,6 +553,8 @@ where
                     | ScrollAction::LineUp
                     | ScrollAction::LineLeft
                     | ScrollAction::Home
+                    | ScrollAction::PageLeft
+                    | ScrollAction::ShiftHome
             );
 
             let find = |scrollables: &[ScrollableInfo]| {
@@ -683,6 +695,38 @@ where
                         } else {
                             None
                         },
+                    });
+                }
+                ScrollAction::PageRight => {
+                    state.scroll_by(
+                        AbsoluteOffset {
+                            x: bounds.width,
+                            y: 0.0,
+                        },
+                        bounds,
+                        content_bounds,
+                    );
+                }
+                ScrollAction::PageLeft => {
+                    state.scroll_by(
+                        AbsoluteOffset {
+                            x: -bounds.width,
+                            y: 0.0,
+                        },
+                        bounds,
+                        content_bounds,
+                    );
+                }
+                ScrollAction::ShiftHome => {
+                    state.snap_to(RelativeOffset {
+                        x: Some(0.0),
+                        y: None,
+                    });
+                }
+                ScrollAction::ShiftEnd => {
+                    state.snap_to(RelativeOffset {
+                        x: Some(1.0),
+                        y: None,
                     });
                 }
             }

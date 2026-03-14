@@ -1401,20 +1401,39 @@ async fn run_instance<P>(
                                 // scrollable when scroll keys are uncaptured
                                 if let core::Event::Keyboard(core::keyboard::Event::KeyPressed {
                                     key: core::keyboard::Key::Named(named),
+                                    modifiers,
                                     ..
                                 }) = &event
                                 {
                                     use operation::focusable::ScrollAction;
 
                                     let action = match named {
+                                        core::keyboard::key::Named::PageDown
+                                            if modifiers.shift() =>
+                                        {
+                                            Some(ScrollAction::PageRight)
+                                        }
                                         core::keyboard::key::Named::PageDown => {
                                             Some(ScrollAction::PageDown)
+                                        }
+                                        core::keyboard::key::Named::PageUp if modifiers.shift() => {
+                                            Some(ScrollAction::PageLeft)
                                         }
                                         core::keyboard::key::Named::PageUp => {
                                             Some(ScrollAction::PageUp)
                                         }
+                                        core::keyboard::key::Named::ArrowDown
+                                            if modifiers.shift() =>
+                                        {
+                                            Some(ScrollAction::LineRight)
+                                        }
                                         core::keyboard::key::Named::ArrowDown => {
                                             Some(ScrollAction::LineDown)
+                                        }
+                                        core::keyboard::key::Named::ArrowUp
+                                            if modifiers.shift() =>
+                                        {
+                                            Some(ScrollAction::LineLeft)
                                         }
                                         core::keyboard::key::Named::ArrowUp => {
                                             Some(ScrollAction::LineUp)
@@ -1425,8 +1444,14 @@ async fn run_instance<P>(
                                         core::keyboard::key::Named::ArrowLeft => {
                                             Some(ScrollAction::LineLeft)
                                         }
+                                        core::keyboard::key::Named::Home if modifiers.shift() => {
+                                            Some(ScrollAction::ShiftHome)
+                                        }
                                         core::keyboard::key::Named::Home => {
                                             Some(ScrollAction::Home)
+                                        }
+                                        core::keyboard::key::Named::End if modifiers.shift() => {
+                                            Some(ScrollAction::ShiftEnd)
                                         }
                                         core::keyboard::key::Named::End => Some(ScrollAction::End),
                                         _ => None,

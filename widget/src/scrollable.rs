@@ -998,11 +998,25 @@ where
                 }
                 Event::Keyboard(keyboard::Event::KeyPressed {
                     key: keyboard::Key::Named(named),
+                    modifiers,
                     ..
                 }) if cursor_over_scrollable.is_some() => {
                     let line_height = f32::from(renderer.default_size());
+                    let is_shift_pressed = modifiers.shift();
 
                     let delta = match named {
+                        key::Named::PageDown if is_shift_pressed => {
+                            Some(Vector::new(bounds.width, 0.0))
+                        }
+                        key::Named::PageUp if is_shift_pressed => {
+                            Some(Vector::new(-bounds.width, 0.0))
+                        }
+                        key::Named::ArrowDown if is_shift_pressed => {
+                            Some(Vector::new(line_height, 0.0))
+                        }
+                        key::Named::ArrowUp if is_shift_pressed => {
+                            Some(Vector::new(-line_height, 0.0))
+                        }
                         key::Named::PageDown => Some(Vector::new(0.0, bounds.height)),
                         key::Named::PageUp => Some(Vector::new(0.0, -bounds.height)),
                         key::Named::ArrowDown => Some(Vector::new(0.0, line_height)),
@@ -1027,15 +1041,22 @@ where
                         };
 
                         if let Some(pos) = home_end_offset {
-                            let offset = match self.direction {
-                                Direction::Horizontal(_) => RelativeOffset {
+                            let offset = if is_shift_pressed {
+                                RelativeOffset {
                                     x: Some(pos),
                                     y: None,
-                                },
-                                _ => RelativeOffset {
-                                    x: None,
-                                    y: Some(pos),
-                                },
+                                }
+                            } else {
+                                match self.direction {
+                                    Direction::Horizontal(_) => RelativeOffset {
+                                        x: Some(pos),
+                                        y: None,
+                                    },
+                                    _ => RelativeOffset {
+                                        x: None,
+                                        y: Some(pos),
+                                    },
+                                }
                             };
 
                             state.snap_to(offset);
