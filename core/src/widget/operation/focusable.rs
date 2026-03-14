@@ -527,14 +527,36 @@ where
                 }
             }
 
-            // Fall back to any scrollable in the tree
-            for scrollable in &self.all_scrollables {
-                if scrollable.can_scroll(self.action) {
-                    return Outcome::Some(ScrollTarget {
-                        scrollable_bounds: scrollable.bounds,
-                        action: self.action,
-                    });
-                }
+            // Fall back to any scrollable in the tree.
+            // Reverse search order for upward/backward actions so
+            // scrolling back through sibling scrollables is symmetric
+            // with scrolling forward.
+            let reverse = matches!(
+                self.action,
+                ScrollAction::PageUp
+                    | ScrollAction::LineUp
+                    | ScrollAction::LineLeft
+                    | ScrollAction::Home
+            );
+
+            let find = |scrollables: &[ScrollableInfo]| {
+                scrollables.iter().position(|s| s.can_scroll(self.action))
+            };
+
+            let index = if reverse {
+                // Search from the end: find last scrollable that can scroll
+                self.all_scrollables
+                    .iter()
+                    .rposition(|s| s.can_scroll(self.action))
+            } else {
+                find(&self.all_scrollables)
+            };
+
+            if let Some(i) = index {
+                return Outcome::Some(ScrollTarget {
+                    scrollable_bounds: self.all_scrollables[i].bounds,
+                    action: self.action,
+                });
             }
 
             Outcome::None

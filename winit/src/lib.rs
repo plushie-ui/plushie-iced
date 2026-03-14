@@ -1334,6 +1334,70 @@ async fn run_instance<P>(
                                     continue;
                                 }
 
+                                // Framework scrolls the focused widget's ancestor
+                                // scrollable when scroll keys are uncaptured
+                                if let core::Event::Keyboard(core::keyboard::Event::KeyPressed {
+                                    key: core::keyboard::Key::Named(named),
+                                    ..
+                                }) = &event
+                                {
+                                    use operation::focusable::ScrollAction;
+
+                                    let action = match named {
+                                        core::keyboard::key::Named::PageDown => {
+                                            Some(ScrollAction::PageDown)
+                                        }
+                                        core::keyboard::key::Named::PageUp => {
+                                            Some(ScrollAction::PageUp)
+                                        }
+                                        core::keyboard::key::Named::ArrowDown => {
+                                            Some(ScrollAction::LineDown)
+                                        }
+                                        core::keyboard::key::Named::ArrowUp => {
+                                            Some(ScrollAction::LineUp)
+                                        }
+                                        core::keyboard::key::Named::ArrowRight => {
+                                            Some(ScrollAction::LineRight)
+                                        }
+                                        core::keyboard::key::Named::ArrowLeft => {
+                                            Some(ScrollAction::LineLeft)
+                                        }
+                                        core::keyboard::key::Named::Home => {
+                                            Some(ScrollAction::Home)
+                                        }
+                                        core::keyboard::key::Named::End => Some(ScrollAction::End),
+                                        _ => None,
+                                    };
+
+                                    if let Some(action) = action
+                                        && status == core::event::Status::Ignored
+                                    {
+                                        let ui = user_interfaces
+                                            .get_mut(&id)
+                                            .expect("Get user interface");
+
+                                        let mut op: Box<dyn operation::Operation> = Box::new(
+                                            operation::focusable::scroll_focused_ancestor::<()>(
+                                                action,
+                                            ),
+                                        );
+
+                                        loop {
+                                            ui.operate(&window.renderer, op.as_mut());
+
+                                            match op.finish() {
+                                                operation::Outcome::Chain(next) => {
+                                                    op = next;
+                                                }
+                                                _ => break,
+                                            }
+                                        }
+
+                                        window.raw.request_redraw();
+                                        continue;
+                                    }
+                                }
+
                                 runtime.broadcast(subscription::Event::Interaction {
                                     window: id,
                                     event,
