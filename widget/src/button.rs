@@ -857,4 +857,13 @@ mod tests {
         state.unfocus();
         assert!(!state.is_focused());
     }
+
+    #[test]
+    fn focused_unfocuses_on_disable() {
+        let mut state = State::default();
+        state.focus();
+        assert!(state.is_focused());
+        state.unfocus();
+        assert!(!state.is_focused());
+    }
 }

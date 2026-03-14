@@ -664,6 +664,27 @@ mod tests {
         state.unfocus();
         assert!(!state.is_focused());
     }
+
+    #[test]
+    fn default_state_not_focused() {
+        let state = State::default();
+        assert!(!state.is_focused);
+        assert!(!state.is_dragging);
+    }
+
+    #[test]
+    fn focus_independent_of_drag() {
+        let mut state = State::default();
+
+        state.focus();
+        assert!(!state.is_dragging);
+
+        state.is_dragging = true;
+        assert!(state.is_focused());
+
+        state.unfocus();
+        assert!(state.is_dragging);
+    }
 }
 
 /// The default style of a [`VerticalSlider`].
