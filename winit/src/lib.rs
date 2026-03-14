@@ -1273,6 +1273,51 @@ async fn run_instance<P>(
                             for (event, status) in
                                 window_events.into_iter().zip(statuses.into_iter())
                             {
+                                // Framework handles uncaptured Tab for focus navigation
+                                if matches!(
+                                    &event,
+                                    core::Event::Keyboard(core::keyboard::Event::KeyPressed {
+                                        key: core::keyboard::Key::Named(
+                                            core::keyboard::key::Named::Tab,
+                                        ),
+                                        ..
+                                    })
+                                ) && status == core::event::Status::Ignored
+                                {
+                                    let shift = matches!(
+                                        &event,
+                                        core::Event::Keyboard(
+                                            core::keyboard::Event::KeyPressed {
+                                                modifiers,
+                                                ..
+                                            }
+                                        ) if modifiers.shift()
+                                    );
+
+                                    let ui =
+                                        user_interfaces.get_mut(&id).expect("Get user interface");
+
+                                    let mut op: Box<dyn operation::Operation> = if shift {
+                                        Box::new(operation::focusable::focus_previous::<()>())
+                                    } else {
+                                        Box::new(operation::focusable::focus_next::<()>())
+                                    };
+
+                                    loop {
+                                        ui.operate(&window.renderer, op.as_mut());
+
+                                        match op.finish() {
+                                            operation::Outcome::Chain(next) => {
+                                                op = next;
+                                            }
+                                            _ => break,
+                                        }
+                                    }
+
+                                    window.raw.request_redraw();
+                                    continue;
+                                }
+
                                 runtime.broadcast(subscription::Event::Interaction {
                                     window: id,
                                     event,

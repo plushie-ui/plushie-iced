@@ -858,7 +858,9 @@ where
                                     slider::Status::Active | slider::Status::Dragged => {
                                         palette.background.strongest.color
                                     }
-                                    slider::Status::Hovered => palette.background.stronger.color,
+                                    slider::Status::Hovered | slider::Status::Focused => {
+                                        palette.background.stronger.color
+                                    }
                                 }
                                 .into(),
                                 Color::TRANSPARENT.into(),
