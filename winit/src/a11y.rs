@@ -11,8 +11,8 @@
 //! [`accesskit`]: https://docs.rs/accesskit
 
 use crate::core::widget::operation::accessible::{
-    Accessible, Live as IcedLive, Orientation as IcedOrientation, Role as IcedRole,
-    Value as IcedValue,
+    Accessible, HasPopup as IcedHasPopup, Live as IcedLive, Orientation as IcedOrientation,
+    Role as IcedRole, Value as IcedValue,
 };
 use crate::core::widget::operation::{Focusable, Scrollable, TextInput};
 use crate::core::widget::{self, Operation};
@@ -355,6 +355,8 @@ pub struct TreeBuilder {
     label_refs: Vec<(NodeId, widget::Id)>,
     /// Pending `described_by` cross-node relationships to resolve in `build()`.
     desc_refs: Vec<(NodeId, widget::Id)>,
+    /// Pending `active_descendant` cross-node relationships to resolve in `build()`.
+    active_desc_refs: Vec<(NodeId, widget::Id)>,
 }
 
 impl TreeBuilder {
@@ -375,6 +377,7 @@ impl TreeBuilder {
             scroll_offset: Vector::ZERO,
             label_refs: Vec::new(),
             desc_refs: Vec::new(),
+            active_desc_refs: Vec::new(),
         }
     }
 }
@@ -476,6 +479,13 @@ impl TreeBuilder {
                 && let Some((_, node)) = self.nodes.iter_mut().find(|(nid, _)| nid == source_id)
             {
                 node.set_described_by(vec![*target_nid]);
+            }
+        }
+        for (source_id, target_wid) in &self.active_desc_refs {
+            if let Some(target_nid) = wid_to_node.get(target_wid)
+                && let Some((_, node)) = self.nodes.iter_mut().find(|(nid, _)| nid == source_id)
+            {
+                node.set_active_descendant(*target_nid);
             }
         }
 
@@ -620,6 +630,9 @@ impl Operation for TreeBuilder {
         if let Some(wid) = accessible.described_by {
             self.desc_refs.push((node_id, wid.clone()));
         }
+        if let Some(wid) = accessible.active_descendant {
+            self.active_desc_refs.push((node_id, wid.clone()));
+        }
 
         // Declare supported actions so AT knows what interactions
         // are available. Matches the pattern in accesskit's
@@ -663,6 +676,19 @@ impl Operation for TreeBuilder {
             node.set_orientation(match orientation {
                 IcedOrientation::Horizontal => accesskit::Orientation::Horizontal,
                 IcedOrientation::Vertical => accesskit::Orientation::Vertical,
+            });
+        }
+        if let Some(pos) = accessible.position_in_set {
+            node.set_position_in_set(pos);
+        }
+        if let Some(size) = accessible.size_of_set {
+            node.set_size_of_set(size);
+        }
+        if let Some(popup) = &accessible.has_popup {
+            node.set_has_popup(match popup {
+                IcedHasPopup::Listbox => accesskit::HasPopup::Listbox,
+                IcedHasPopup::Menu => accesskit::HasPopup::Menu,
+                IcedHasPopup::Dialog => accesskit::HasPopup::Dialog,
             });
         }
 
