@@ -145,6 +145,17 @@ pub enum Orientation {
     Vertical,
 }
 
+/// The type of popup triggered by a widget.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HasPopup {
+    /// A listbox popup (used by combobox and pick list).
+    Listbox,
+    /// A menu popup (used by menu buttons).
+    Menu,
+    /// A dialog popup (used by modal triggers).
+    Dialog,
+}
+
 /// Accessibility metadata for a single widget.
 ///
 /// Passed to [`Operation::accessible`] by widgets that wish to
@@ -191,4 +202,14 @@ pub struct Accessible<'a> {
     /// Use this instead of [`description`](Self::description) when
     /// the description comes from a separate widget in the tree.
     pub described_by: Option<&'a widget::Id>,
+    /// Position of this item in a set (1-based). Used for list items,
+    /// radio buttons, and tab panels.
+    pub position_in_set: Option<usize>,
+    /// Total number of items in the set containing this item.
+    pub size_of_set: Option<usize>,
+    /// The currently active child in a composite widget (e.g. the
+    /// highlighted option in a combobox popup).
+    pub active_descendant: Option<&'a widget::Id>,
+    /// The type of popup this widget triggers when activated.
+    pub has_popup: Option<HasPopup>,
 }
