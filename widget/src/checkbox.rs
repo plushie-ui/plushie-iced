@@ -344,15 +344,17 @@ where
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
             | Event::Touch(touch::Event::FingerPressed { .. }) => {
-                let mouse_over = cursor.is_over(layout.bounds());
+                let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
 
-                if mouse_over && let Some(on_toggle) = &self.on_toggle {
-                    let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
-
+                if cursor.is_over(layout.bounds())
+                    && let Some(on_toggle) = &self.on_toggle
+                {
                     state.is_focused = true;
 
                     shell.publish((on_toggle)(!self.is_checked));
                     shell.capture_event();
+                } else {
+                    state.is_focused = false;
                 }
             }
             Event::Keyboard(keyboard::Event::KeyPressed {

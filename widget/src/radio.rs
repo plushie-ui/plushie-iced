@@ -375,13 +375,15 @@ where
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
             | Event::Touch(touch::Event::FingerPressed { .. }) => {
-                if cursor.is_over(layout.bounds()) {
-                    let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
+                let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
 
+                if cursor.is_over(layout.bounds()) {
                     state.is_focused = true;
 
                     shell.publish(self.on_click.clone());
                     shell.capture_event();
+                } else {
+                    state.is_focused = false;
                 }
             }
             Event::Keyboard(keyboard::Event::KeyPressed {

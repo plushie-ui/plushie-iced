@@ -37,6 +37,7 @@ use crate::core::renderer;
 use crate::core::touch;
 use crate::core::widget::Operation;
 use crate::core::widget::operation::accessible::{Accessible, Role, Value};
+use crate::core::widget::operation::focusable::Focusable;
 use crate::core::widget::tree::{self, Tree};
 use crate::core::window;
 use crate::core::{
@@ -244,11 +245,13 @@ where
 
     fn operate(
         &mut self,
-        _tree: &mut Tree,
+        tree: &mut Tree,
         layout: Layout<'_>,
         _renderer: &Renderer,
         operation: &mut dyn Operation,
     ) {
+        let state = tree.state.downcast_mut::<State>();
+
         operation.accessible(
             None,
             layout.bounds(),
@@ -263,6 +266,8 @@ where
                 ..Accessible::default()
             },
         );
+
+        operation.focusable(None, layout.bounds(), state);
     }
 
     fn update(
@@ -343,7 +348,7 @@ where
                 T::from_f64(new_value)
             };
 
-            let change = |new_value: T| {
+            let mut change = |new_value: T| {
                 if (self.value.into() - new_value.into()).abs() > f64::EPSILON {
                     shell.publish((self.on_change)(new_value));
 
@@ -355,6 +360,8 @@ where
                 Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
                 | Event::Touch(touch::Event::FingerPressed { .. }) => {
                     if let Some(cursor_position) = cursor.position_over(layout.bounds()) {
+                        state.is_focused = true;
+
                         if state.keyboard_modifiers.command() {
                             let _ = self.default.map(change);
                             state.is_dragging = false;
@@ -364,6 +371,8 @@ where
                         }
 
                         shell.capture_event();
+                    } else {
+                        state.is_focused = false;
                     }
                 }
                 Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
@@ -403,14 +412,22 @@ where
                     }
                 }
                 Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) => {
-                    if cursor.is_over(layout.bounds()) {
+                    if cursor.is_over(layout.bounds()) || state.is_focused {
                         match key {
-                            Key::Named(key::Named::ArrowUp) => {
+                            Key::Named(key::Named::ArrowUp | key::Named::ArrowRight) => {
                                 let _ = increment(current_value).map(change);
                                 shell.capture_event();
                             }
-                            Key::Named(key::Named::ArrowDown) => {
+                            Key::Named(key::Named::ArrowDown | key::Named::ArrowLeft) => {
                                 let _ = decrement(current_value).map(change);
+                                shell.capture_event();
+                            }
+                            Key::Named(key::Named::Home) => {
+                                change(*self.range.start());
+                                shell.capture_event();
+                            }
+                            Key::Named(key::Named::End) => {
+                                change(*self.range.end());
                                 shell.capture_event();
                             }
                             _ => (),
@@ -428,6 +445,8 @@ where
 
         let current_status = if state.is_dragging {
             Status::Dragged
+        } else if state.is_focused {
+            Status::Focused
         } else if cursor.is_over(layout.bounds()) {
             Status::Hovered
         } else {
@@ -571,7 +590,22 @@ where
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 struct State {
     is_dragging: bool,
+    is_focused: bool,
     keyboard_modifiers: keyboard::Modifiers,
+}
+
+impl Focusable for State {
+    fn is_focused(&self) -> bool {
+        self.is_focused
+    }
+
+    fn focus(&mut self) {
+        self.is_focused = true;
+    }
+
+    fn unfocus(&mut self) {
+        self.is_focused = false;
+    }
 }
 
 /// The possible status of a [`Slider`].
@@ -583,6 +617,8 @@ pub enum Status {
     Hovered,
     /// The [`Slider`] is being dragged.
     Dragged,
+    /// The [`Slider`] has keyboard focus.
+    Focused,
 }
 
 /// The appearance of a slider.
@@ -679,8 +715,13 @@ pub fn default(theme: &Theme, status: Status) -> Style {
 
     let color = match status {
         Status::Active => palette.primary.base.color,
-        Status::Hovered => palette.primary.strong.color,
+        Status::Hovered | Status::Focused => palette.primary.strong.color,
         Status::Dragged => palette.primary.weak.color,
+    };
+
+    let (handle_border_color, handle_border_width) = match status {
+        Status::Focused => (palette.primary.strong.color, 2.0),
+        _ => (Color::TRANSPARENT, 0.0),
     };
 
     Style {
@@ -696,8 +737,8 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         handle: Handle {
             shape: HandleShape::Circle { radius: 7.0 },
             background: color.into(),
-            border_color: Color::TRANSPARENT,
-            border_width: 0.0,
+            border_color: handle_border_color,
+            border_width: handle_border_width,
         },
     }
 }

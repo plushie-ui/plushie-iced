@@ -30,7 +30,7 @@
 //! ```
 use std::ops::RangeInclusive;
 
-pub use crate::slider::{Catalog, Handle, HandleShape, Status, Style, StyleFn, default};
+pub use crate::slider::{Handle, HandleShape, Rail, Style};
 
 use crate::core::border::Border;
 use crate::core::keyboard;
@@ -41,9 +41,12 @@ use crate::core::renderer;
 use crate::core::touch;
 use crate::core::widget::Operation;
 use crate::core::widget::operation::accessible::{Accessible, Orientation, Role, Value};
+use crate::core::widget::operation::focusable::Focusable;
 use crate::core::widget::tree::{self, Tree};
 use crate::core::window;
-use crate::core::{self, Element, Event, Length, Pixels, Point, Rectangle, Shell, Size, Widget};
+use crate::core::{
+    self, Color, Element, Event, Length, Pixels, Point, Rectangle, Shell, Size, Theme, Widget,
+};
 
 /// An vertical bar and a handle that selects a single value from a range of
 /// values.
@@ -210,6 +213,27 @@ where
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct State {
+    is_dragging: bool,
+    is_focused: bool,
+    keyboard_modifiers: keyboard::Modifiers,
+}
+
+impl Focusable for State {
+    fn is_focused(&self) -> bool {
+        self.is_focused
+    }
+
+    fn focus(&mut self) {
+        self.is_focused = true;
+    }
+
+    fn unfocus(&mut self) {
+        self.is_focused = false;
+    }
+}
+
 impl<T, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
     for VerticalSlider<'_, T, Message, Theme>
 where
@@ -244,11 +268,13 @@ where
 
     fn operate(
         &mut self,
-        _tree: &mut Tree,
+        tree: &mut Tree,
         layout: Layout<'_>,
         _renderer: &Renderer,
         operation: &mut dyn Operation,
     ) {
+        let state = tree.state.downcast_mut::<State>();
+
         operation.accessible(
             None,
             layout.bounds(),
@@ -264,6 +290,8 @@ where
                 ..Accessible::default()
             },
         );
+
+        operation.focusable(None, layout.bounds(), state);
     }
 
     fn update(
@@ -344,7 +372,7 @@ where
             T::from_f64(new_value)
         };
 
-        let change = |new_value: T| {
+        let mut change = |new_value: T| {
             if (self.value.into() - new_value.into()).abs() > f64::EPSILON {
                 shell.publish((self.on_change)(new_value));
 
@@ -364,7 +392,11 @@ where
                         state.is_dragging = true;
                     }
 
+                    state.is_focused = true;
+
                     shell.capture_event();
+                } else {
+                    state.is_focused = false;
                 }
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
@@ -404,14 +436,22 @@ where
                 }
             }
             Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) => {
-                if cursor.is_over(layout.bounds()) {
+                if cursor.is_over(layout.bounds()) || state.is_focused {
                     match key {
-                        Key::Named(key::Named::ArrowUp) => {
+                        Key::Named(key::Named::ArrowUp | key::Named::ArrowRight) => {
                             let _ = increment(current_value).map(change);
                             shell.capture_event();
                         }
-                        Key::Named(key::Named::ArrowDown) => {
+                        Key::Named(key::Named::ArrowDown | key::Named::ArrowLeft) => {
                             let _ = decrement(current_value).map(change);
+                            shell.capture_event();
+                        }
+                        Key::Named(key::Named::Home) => {
+                            change(*self.range.start());
+                            shell.capture_event();
+                        }
+                        Key::Named(key::Named::End) => {
+                            change(*self.range.end());
                             shell.capture_event();
                         }
                         _ => (),
@@ -426,6 +466,8 @@ where
 
         let current_status = if state.is_dragging {
             Status::Dragged
+        } else if state.is_focused {
+            Status::Focused
         } else if cursor.is_over(layout.bounds()) {
             Status::Hovered
         } else {
@@ -568,8 +610,78 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-struct State {
-    is_dragging: bool,
-    keyboard_modifiers: keyboard::Modifiers,
+/// The possible status of a [`VerticalSlider`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Status {
+    /// The [`VerticalSlider`] can be interacted with.
+    Active,
+    /// The [`VerticalSlider`] is being hovered.
+    Hovered,
+    /// The [`VerticalSlider`] is being dragged.
+    Dragged,
+    /// The [`VerticalSlider`] has keyboard focus.
+    Focused,
+}
+
+/// The theme catalog of a [`VerticalSlider`].
+pub trait Catalog: Sized {
+    /// The item class of the [`Catalog`].
+    type Class<'a>;
+
+    /// The default class produced by the [`Catalog`].
+    fn default<'a>() -> Self::Class<'a>;
+
+    /// The [`Style`] of a class with the given status.
+    fn style(&self, class: &Self::Class<'_>, status: Status) -> Style;
+}
+
+/// A styling function for a [`VerticalSlider`].
+pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Status) -> Style + 'a>;
+
+impl Catalog for Theme {
+    type Class<'a> = StyleFn<'a, Self>;
+
+    fn default<'a>() -> Self::Class<'a> {
+        Box::new(default)
+    }
+
+    fn style(&self, class: &Self::Class<'_>, status: Status) -> Style {
+        class(self, status)
+    }
+}
+
+/// The default style of a [`VerticalSlider`].
+pub fn default(theme: &Theme, status: Status) -> Style {
+    let palette = theme.palette();
+
+    let color = match status {
+        Status::Active => palette.primary.base.color,
+        Status::Hovered => palette.primary.strong.color,
+        Status::Dragged => palette.primary.weak.color,
+        Status::Focused => palette.primary.strong.color,
+    };
+
+    Style {
+        rail: Rail {
+            backgrounds: (color.into(), palette.background.strong.color.into()),
+            width: 4.0,
+            border: Border {
+                radius: 2.0.into(),
+                width: 0.0,
+                color: Color::TRANSPARENT,
+            },
+        },
+        handle: Handle {
+            shape: HandleShape::Circle { radius: 7.0 },
+            background: color.into(),
+            border_color: match status {
+                Status::Focused => palette.primary.strong.color,
+                _ => Color::TRANSPARENT,
+            },
+            border_width: match status {
+                Status::Focused => 2.0,
+                _ => 0.0,
+            },
+        },
+    }
 }

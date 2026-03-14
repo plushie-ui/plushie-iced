@@ -323,17 +323,15 @@ where
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
             | Event::Touch(touch::Event::FingerPressed { .. }) => {
-                if self.on_press.is_some() {
-                    let bounds = layout.bounds();
+                let state = tree.state.downcast_mut::<State>();
 
-                    if cursor.is_over(bounds) {
-                        let state = tree.state.downcast_mut::<State>();
+                if self.on_press.is_some() && cursor.is_over(layout.bounds()) {
+                    state.is_pressed = true;
+                    state.is_focused = true;
 
-                        state.is_pressed = true;
-                        state.is_focused = true;
-
-                        shell.capture_event();
-                    }
+                    shell.capture_event();
+                } else {
+                    state.is_focused = false;
                 }
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
