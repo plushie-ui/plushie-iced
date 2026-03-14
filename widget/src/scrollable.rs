@@ -23,6 +23,7 @@ use crate::container;
 use crate::core::alignment;
 use crate::core::border::{self, Border};
 use crate::core::keyboard;
+use crate::core::keyboard::key;
 use crate::core::layout;
 use crate::core::mouse;
 use crate::core::overlay;
@@ -994,6 +995,62 @@ where
                     }
 
                     let _ = notify_viewport(state, &self.on_scroll, bounds, content_bounds, shell);
+                }
+                Event::Keyboard(keyboard::Event::KeyPressed {
+                    key: keyboard::Key::Named(named),
+                    ..
+                }) if cursor_over_scrollable.is_some() => {
+                    let line_height = 20.0;
+
+                    let delta = match named {
+                        key::Named::PageDown => Some(Vector::new(0.0, bounds.height)),
+                        key::Named::PageUp => Some(Vector::new(0.0, -bounds.height)),
+                        key::Named::ArrowDown => Some(Vector::new(0.0, line_height)),
+                        key::Named::ArrowUp => Some(Vector::new(0.0, -line_height)),
+                        key::Named::ArrowRight => Some(Vector::new(line_height, 0.0)),
+                        key::Named::ArrowLeft => Some(Vector::new(-line_height, 0.0)),
+                        _ => None,
+                    };
+
+                    if let Some(delta) = delta {
+                        state.scroll(self.direction.align(delta), bounds, content_bounds);
+
+                        let _ =
+                            notify_scroll(state, &self.on_scroll, bounds, content_bounds, shell);
+
+                        shell.capture_event();
+                    } else {
+                        let home_end_offset = match named {
+                            key::Named::Home => Some(0.0),
+                            key::Named::End => Some(1.0),
+                            _ => None,
+                        };
+
+                        if let Some(pos) = home_end_offset {
+                            let offset = match self.direction {
+                                Direction::Horizontal(_) => RelativeOffset {
+                                    x: Some(pos),
+                                    y: None,
+                                },
+                                _ => RelativeOffset {
+                                    x: None,
+                                    y: Some(pos),
+                                },
+                            };
+
+                            state.snap_to(offset);
+
+                            let _ = notify_scroll(
+                                state,
+                                &self.on_scroll,
+                                bounds,
+                                content_bounds,
+                                shell,
+                            );
+
+                            shell.capture_event();
+                        }
+                    }
                 }
                 _ => {}
             }
