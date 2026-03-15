@@ -15,6 +15,7 @@ use crate::pane_grid::{self, PaneGrid};
 use crate::pick_list::{self, PickList};
 use crate::progress_bar::{self, ProgressBar};
 use crate::radio::{self, Radio};
+use crate::radio_group::RadioGroup;
 use crate::scrollable::{self, Scrollable};
 use crate::slider::{self, Slider};
 use crate::text::{self, Text};
@@ -1327,6 +1328,24 @@ where
     V: Copy + Eq,
 {
     Radio::new(label, value, selected, on_click)
+}
+
+/// Creates a new [`RadioGroup`].
+///
+/// A radio group renders multiple radio options as a single Tab stop
+/// with arrow key navigation following the APG radio group pattern.
+pub fn radio_group<'a, Message, Theme, Renderer, V>(
+    options: impl IntoIterator<Item = (impl Into<String>, V)>,
+    selected: Option<V>,
+    on_select: impl Fn(V) -> Message + 'a,
+) -> RadioGroup<'a, V, Message, Theme, Renderer>
+where
+    Message: Clone,
+    Theme: radio::Catalog + 'a,
+    Renderer: core::text::Renderer,
+    V: Copy + Eq,
+{
+    RadioGroup::new(options, selected, on_select)
 }
 
 /// Creates a new [`Toggler`].
