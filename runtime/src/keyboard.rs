@@ -3,7 +3,7 @@ pub use iced_core::keyboard::*;
 
 use crate::UserInterface;
 use crate::core;
-use crate::core::widget::operation;
+use crate::core::widget::operation::{self, Operation as _};
 
 /// Runs a chained operation to completion.
 fn run_operation<Message, Theme, Renderer>(
@@ -37,6 +37,30 @@ fn focus_and_scroll<Message, Theme, Renderer>(
         Box::new(operation::focusable::focus_previous::<()>())
     } else {
         Box::new(operation::focusable::focus_next::<()>())
+    };
+
+    run_operation(ui, renderer, op);
+
+    run_operation(
+        ui,
+        renderer,
+        Box::new(operation::focusable::scroll_focused_into_view::<()>()),
+    );
+}
+
+/// Moves focus within a scope and scrolls the newly focused widget into view.
+fn focus_and_scroll_within<Message, Theme, Renderer>(
+    shift: bool,
+    ui: &mut UserInterface<'_, Message, Theme, Renderer>,
+    renderer: &Renderer,
+    scope: core::widget::Id,
+) where
+    Renderer: core::Renderer,
+{
+    let op: Box<dyn operation::Operation> = if shift {
+        Box::new(operation::focusable::focus_previous_within::<()>(scope))
+    } else {
+        Box::new(operation::focusable::focus_next_within::<()>(scope))
     };
 
     run_operation(ui, renderer, op);
@@ -106,6 +130,123 @@ where
     }
 
     false
+}
+
+/// Handle Ctrl+Tab / Ctrl+Shift+Tab for focus navigation within a scope.
+///
+/// Behaves like [`handle_ctrl_tab`] but restricts focus cycling to widgets
+/// that are descendants of the container with the given `scope` [`Id`].
+///
+/// Returns `true` if the event was consumed.
+pub fn handle_ctrl_tab_within<Message, Theme, Renderer>(
+    event: &core::Event,
+    ui: &mut UserInterface<'_, Message, Theme, Renderer>,
+    renderer: &Renderer,
+    scope: core::widget::Id,
+) -> bool
+where
+    Renderer: core::Renderer,
+{
+    if let core::Event::Keyboard(core::keyboard::Event::KeyPressed {
+        key: core::keyboard::Key::Named(core::keyboard::key::Named::Tab),
+        modifiers,
+        ..
+    }) = event
+        && modifiers.control()
+    {
+        focus_and_scroll_within(modifiers.shift(), ui, renderer, scope);
+        return true;
+    }
+
+    false
+}
+
+/// Handle uncaptured Tab / Shift+Tab for focus navigation within a scope.
+///
+/// Behaves like [`handle_tab`] but restricts focus cycling to widgets
+/// that are descendants of the container with the given `scope` [`Id`].
+///
+/// Returns `true` if the event was consumed.
+pub fn handle_tab_within<Message, Theme, Renderer>(
+    event: &core::Event,
+    status: core::event::Status,
+    ui: &mut UserInterface<'_, Message, Theme, Renderer>,
+    renderer: &Renderer,
+    scope: core::widget::Id,
+) -> bool
+where
+    Renderer: core::Renderer,
+{
+    if status != core::event::Status::Ignored {
+        return false;
+    }
+
+    if let core::Event::Keyboard(core::keyboard::Event::KeyPressed {
+        key: core::keyboard::Key::Named(core::keyboard::key::Named::Tab),
+        modifiers,
+        ..
+    }) = event
+    {
+        focus_and_scroll_within(modifiers.shift(), ui, renderer, scope);
+        return true;
+    }
+
+    false
+}
+
+/// Handle Alt+letter mnemonics for widget activation.
+///
+/// When the user presses Alt plus a letter key (without Ctrl or Super),
+/// searches the widget tree for a widget whose [`mnemonic`] matches the
+/// pressed character. If found and the widget has an [`Id`], it is
+/// focused. Returns `Some(bounds)` with the matched widget's bounding
+/// rectangle so the caller can generate a synthetic click, or `None` if
+/// no match was found.
+///
+/// [`mnemonic`]: core::widget::operation::accessible::Accessible::mnemonic
+/// [`Id`]: core::widget::Id
+pub fn handle_mnemonic<Message, Theme, Renderer>(
+    event: &core::Event,
+    status: core::event::Status,
+    ui: &mut UserInterface<'_, Message, Theme, Renderer>,
+    renderer: &Renderer,
+) -> Option<core::Rectangle>
+where
+    Renderer: core::Renderer,
+{
+    if status != core::event::Status::Ignored {
+        return None;
+    }
+
+    if let core::Event::Keyboard(core::keyboard::Event::KeyPressed {
+        key: core::keyboard::Key::Character(smol),
+        modifiers,
+        ..
+    }) = event
+    {
+        if !modifiers.alt() || modifiers.control() || modifiers.logo() {
+            return None;
+        }
+
+        let ch = smol.chars().next()?;
+
+        let mut op = operation::focusable::find_mnemonic(ch);
+        ui.operate(renderer, &mut operation::black_box::<_, ()>(&mut op));
+
+        if let operation::Outcome::Some(target) = op.finish() {
+            if let Some(id) = target.id {
+                run_operation(
+                    ui,
+                    renderer,
+                    Box::new(operation::focusable::focus::<()>(id)),
+                );
+            }
+
+            return Some(target.bounds);
+        }
+    }
+
+    None
 }
 
 /// Handle uncaptured scroll keys for focused ancestor scrolling.
