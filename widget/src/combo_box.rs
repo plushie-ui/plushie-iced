@@ -477,6 +477,7 @@ struct Menu<T> {
     hovered_option: Option<usize>,
     new_selection: Option<T>,
     filtered_options: Filtered<T>,
+    dismissed: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -526,8 +527,9 @@ where
         widget::tree::State::new(Menu::<T> {
             menu: menu::State::new(),
             filtered_options: Filtered::empty(),
-            hovered_option: Some(0),
+            hovered_option: None,
             new_selection: None,
+            dismissed: false,
         })
     }
 
@@ -602,6 +604,29 @@ where
         // since `Shell` does not expose such functionality.
         let mut published_message_to_shell = false;
 
+        // If the dropdown is open and Escape is pressed, close the dropdown
+        // but keep focus on the text input by handling the event here before
+        // it reaches the inner TextInput (which would unfocus entirely).
+        if started_focused
+            && let Event::Keyboard(keyboard::Event::KeyPressed {
+                key: keyboard::Key::Named(key::Named::Escape),
+                ..
+            }) = event
+        {
+            menu.hovered_option = None;
+            menu.new_selection = None;
+            menu.dismissed = true;
+            shell.request_redraw();
+            shell.invalidate_widgets();
+            shell.capture_event();
+
+            if let Some(on_close) = self.on_close.take() {
+                shell.publish(on_close);
+            }
+
+            return;
+        }
+
         // Create a new list of local messages
         let mut local_messages = Vec::new();
         let mut local_shell = Shell::new(&mut local_messages);
@@ -636,6 +661,7 @@ where
             // Couple the filtered options with the `ComboBox`
             // value and only recompute them when the value changes,
             // instead of doing it in every `view` call
+            menu.dismissed = false;
             self.state.with_inner_mut(|state| {
                 menu.hovered_option = Some(0);
                 state.value = new_value;
@@ -687,7 +713,8 @@ where
                             shell.capture_event();
                             shell.request_redraw();
                         }
-                        (key::Named::ArrowUp, _) | (key::Named::Tab, true) => {
+                        (key::Named::ArrowUp, _) => {
+                            menu.dismissed = false;
                             if let Some(index) = &mut menu.hovered_option {
                                 if *index == 0 {
                                     *index = state.filtered_options.options.len().saturating_sub(1);
@@ -711,9 +738,8 @@ where
                             shell.capture_event();
                             shell.request_redraw();
                         }
-                        (key::Named::ArrowDown, _) | (key::Named::Tab, false)
-                            if !modifiers.shift() =>
-                        {
+                        (key::Named::ArrowDown, _) if !modifiers.shift() => {
+                            menu.dismissed = false;
                             if let Some(index) = &mut menu.hovered_option {
                                 if *index >= state.filtered_options.options.len().saturating_sub(1)
                                 {
@@ -785,6 +811,12 @@ where
         if started_focused != is_focused {
             // Focus changed, invalidate widget tree to force a fresh `view`
             shell.invalidate_widgets();
+
+            if is_focused {
+                // Clear dismissed flag when the input regains focus
+                // so the dropdown shows with current filter results
+                menu.dismissed = false;
+            }
 
             if !published_message_to_shell {
                 if is_focused {
@@ -866,12 +898,13 @@ where
                 menu,
                 filtered_options,
                 hovered_option,
+                dismissed,
                 ..
             } = tree.state.downcast_mut::<Menu<T>>();
 
             self.state.sync_filtered_options(filtered_options);
 
-            if filtered_options.options.is_empty() {
+            if filtered_options.options.is_empty() || *dismissed {
                 None
             } else {
                 let bounds = layout.bounds();
