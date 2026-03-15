@@ -50,6 +50,14 @@ independent of upstream iced releases.
 - Mnemonic lookup operation for Alt+letter widget activation
 - Accessibility selectors in `iced_test` for headless a11y testing
 
+### Removed from upstream
+
+- **macOS URL scheme handling** (`event::listen_url`,
+  `ReceivedUrl` subscription event). Upstream iced uses a forked
+  winit to support macOS deep links / custom URL schemes. This fork
+  switches to upstream winit from crates.io, which doesn't include
+  that feature. We'd like to support it once upstream winit does.
+
 ### Crate naming
 
 All crates are published under a `julep-iced-` prefix. Cargo's

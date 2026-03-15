@@ -194,7 +194,7 @@ iced_widget = { version = "0.6.0", path = "widget", package = "julep-iced-widget
 iced_winit = { version = "0.6.0", path = "winit", default-features = false, package = "julep-iced-winit" }
 
 accesskit = "0.24"
-accesskit_winit = "0.32"
+accesskit_winit = "0.32.2"
 arboard = { version = "3.6", default-features = false }
 bincode = "1.3"
 bitflags = "2.0"
@@ -245,11 +245,7 @@ wasmtimer = "0.4.2"
 web-sys = "=0.3.85"
 web-time = "1.1"
 wgpu = { version = "28.0", default-features = false, features = ["std", "wgsl"] }
-winit = { git = "https://github.com/iced-rs/winit.git", rev = "05b8ff17a06562f0a10bb46e6eaacbe2a95cb5ed", default-features = false, features = ["rwh_06"] }
-
-# Ensure accesskit_winit uses the same winit fork as the rest of the workspace
-[patch.crates-io]
-winit = { git = "https://github.com/iced-rs/winit.git", rev = "05b8ff17a06562f0a10bb46e6eaacbe2a95cb5ed" }
+winit = { version = "0.30", default-features = false, features = ["rwh_06"] }
 
 [workspace.lints.rust]
 rust_2018_idioms = { level = "deny", priority = -1 }

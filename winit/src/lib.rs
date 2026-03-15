@@ -245,15 +245,6 @@ where
             );
         }
 
-        fn received_url(&mut self, event_loop: &winit::event_loop::ActiveEventLoop, url: String) {
-            self.process_event(
-                event_loop,
-                Event::EventLoopAwakened(winit::event::Event::PlatformSpecific(
-                    winit::event::PlatformSpecific::MacOS(winit::event::MacOS::ReceivedUrl(url)),
-                )),
-            );
-        }
-
         fn about_to_wait(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
             self.process_event(
                 event_loop,
@@ -751,15 +742,6 @@ async fn run_instance<P>(
                             let _ =
                                 control_sender.start_send(Control::ChangeFlow(ControlFlow::Wait));
                         }
-                    }
-                    event::Event::PlatformSpecific(event::PlatformSpecific::MacOS(
-                        event::MacOS::ReceivedUrl(url),
-                    )) => {
-                        runtime.broadcast(subscription::Event::PlatformSpecific(
-                            subscription::PlatformSpecific::MacOS(
-                                subscription::MacOS::ReceivedUrl(url),
-                            ),
-                        ));
                     }
                     event::Event::UserEvent(action) => {
                         run_action(
