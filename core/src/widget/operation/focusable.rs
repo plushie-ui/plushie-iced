@@ -1,5 +1,6 @@
 //! Operate on widgets that can be focused.
 use crate::widget::Id;
+use crate::widget::operation::accessible::Accessible;
 use crate::widget::operation::scrollable::{AbsoluteOffset, RelativeOffset, Scrollable};
 use crate::widget::operation::{self, Operation, Outcome};
 use crate::{Rectangle, Vector};
@@ -99,6 +100,70 @@ pub fn count() -> impl Operation<Count> {
     }
 }
 
+/// A [`Count`] paired with the [`Id`] of the scope it was computed within.
+struct ScopedCountResult {
+    target: Id,
+    count: Count,
+}
+
+/// Produces an [`Operation`] that generates a [`Count`] of focusable widgets
+/// within the container identified by `target`.
+///
+/// The result carries both the count and the target [`Id`] so that a
+/// subsequent [`Operation`] can reuse it without capturing state.
+fn scoped_count(target: Id) -> impl Operation<ScopedCountResult> {
+    struct ScopedCount {
+        target: Id,
+        pending_scope: bool,
+        inside_scope: bool,
+        count: Count,
+    }
+
+    impl Operation<ScopedCountResult> for ScopedCount {
+        fn container(&mut self, id: Option<&Id>, _bounds: Rectangle) {
+            if id.is_some_and(|id| *id == self.target) {
+                self.pending_scope = true;
+            }
+        }
+
+        fn traverse(&mut self, operate: &mut dyn FnMut(&mut dyn Operation<ScopedCountResult>)) {
+            let was_inside = self.inside_scope;
+            if self.pending_scope {
+                self.inside_scope = true;
+                self.pending_scope = false;
+            }
+            operate(self);
+            self.inside_scope = was_inside;
+        }
+
+        fn focusable(&mut self, _id: Option<&Id>, _bounds: Rectangle, state: &mut dyn Focusable) {
+            if !self.inside_scope {
+                return;
+            }
+
+            if state.is_focused() {
+                self.count.focused = Some(self.count.total);
+            }
+
+            self.count.total += 1;
+        }
+
+        fn finish(&self) -> Outcome<ScopedCountResult> {
+            Outcome::Some(ScopedCountResult {
+                target: self.target.clone(),
+                count: self.count,
+            })
+        }
+    }
+
+    ScopedCount {
+        target,
+        pending_scope: false,
+        inside_scope: false,
+        count: Count::default(),
+    }
+}
+
 /// Produces an [`Operation`] that searches for the current focused widget, and
 /// - if found, focuses the previous focusable widget.
 /// - if not found, focuses the last focusable widget.
@@ -173,6 +238,138 @@ where
     }
 
     operation::then(count(), |count| FocusNext { count, current: 0 })
+}
+
+/// Produces an [`Operation`] that cycles focus to the previous focusable
+/// widget within the container identified by `target`.
+///
+/// Behaves like [`focus_previous`] but only considers widgets that are
+/// descendants of `target`. Widgets outside the scope are not counted and
+/// their focus state is not changed.
+pub fn focus_previous_within<T>(target: Id) -> impl Operation<T>
+where
+    T: Send + 'static,
+{
+    struct ScopedFocusPrevious {
+        target: Id,
+        pending_scope: bool,
+        inside_scope: bool,
+        count: Count,
+        current: usize,
+    }
+
+    impl<T> Operation<T> for ScopedFocusPrevious {
+        fn container(&mut self, id: Option<&Id>, _bounds: Rectangle) {
+            if id.is_some_and(|id| *id == self.target) {
+                self.pending_scope = true;
+            }
+        }
+
+        fn traverse(&mut self, operate: &mut dyn FnMut(&mut dyn Operation<T>)) {
+            let was_inside = self.inside_scope;
+            if self.pending_scope {
+                self.inside_scope = true;
+                self.pending_scope = false;
+            }
+            operate(self);
+            self.inside_scope = was_inside;
+        }
+
+        fn focusable(&mut self, _id: Option<&Id>, _bounds: Rectangle, state: &mut dyn Focusable) {
+            if !self.inside_scope {
+                return;
+            }
+
+            if self.count.total == 0 {
+                return;
+            }
+
+            match self.count.focused {
+                None if self.current == self.count.total - 1 => state.focus(),
+                Some(0) if self.current == self.count.total - 1 => {
+                    state.focus();
+                }
+                Some(0) if self.current == 0 => state.unfocus(),
+                Some(0) => {}
+                Some(focused) if focused == self.current => state.unfocus(),
+                Some(focused) if focused - 1 == self.current => state.focus(),
+                _ => {}
+            }
+
+            self.current += 1;
+        }
+    }
+
+    operation::then(scoped_count(target), |result| ScopedFocusPrevious {
+        target: result.target,
+        pending_scope: false,
+        inside_scope: false,
+        count: result.count,
+        current: 0,
+    })
+}
+
+/// Produces an [`Operation`] that cycles focus to the next focusable widget
+/// within the container identified by `target`.
+///
+/// Behaves like [`focus_next`] but only considers widgets that are
+/// descendants of `target`. Widgets outside the scope are not counted and
+/// their focus state is not changed.
+pub fn focus_next_within<T>(target: Id) -> impl Operation<T>
+where
+    T: Send + 'static,
+{
+    struct ScopedFocusNext {
+        target: Id,
+        pending_scope: bool,
+        inside_scope: bool,
+        count: Count,
+        current: usize,
+    }
+
+    impl<T> Operation<T> for ScopedFocusNext {
+        fn container(&mut self, id: Option<&Id>, _bounds: Rectangle) {
+            if id.is_some_and(|id| *id == self.target) {
+                self.pending_scope = true;
+            }
+        }
+
+        fn traverse(&mut self, operate: &mut dyn FnMut(&mut dyn Operation<T>)) {
+            let was_inside = self.inside_scope;
+            if self.pending_scope {
+                self.inside_scope = true;
+                self.pending_scope = false;
+            }
+            operate(self);
+            self.inside_scope = was_inside;
+        }
+
+        fn focusable(&mut self, _id: Option<&Id>, _bounds: Rectangle, state: &mut dyn Focusable) {
+            if !self.inside_scope {
+                return;
+            }
+
+            match self.count.focused {
+                None if self.current == 0 => state.focus(),
+                Some(focused) if focused == self.count.total - 1 && self.current == 0 => {
+                    state.focus();
+                }
+                Some(focused) if focused == self.current => state.unfocus(),
+                Some(focused) if focused + 1 == self.current => state.focus(),
+                _ => {}
+            }
+
+            self.current += 1;
+        }
+    }
+
+    operation::then(scoped_count(target), |result| ScopedFocusNext {
+        target: result.target,
+        pending_scope: false,
+        inside_scope: false,
+        count: result.count,
+        current: 0,
+    })
 }
 
 /// Produces an [`Operation`] that searches for the current focused widget
@@ -747,4 +944,58 @@ where
         },
         |target| ApplyScroll { target },
     )
+}
+
+/// The result of a successful mnemonic lookup.
+#[derive(Debug, Clone)]
+pub struct MnemonicTarget {
+    /// The bounding rectangle of the matched widget.
+    pub bounds: Rectangle,
+    /// The widget [`Id`], if it has one.
+    pub id: Option<Id>,
+}
+
+/// Produces an [`Operation`] that walks the widget tree and finds the
+/// first enabled widget whose [`mnemonic`] matches `key`
+/// (case-insensitive).
+///
+/// [`mnemonic`]: Accessible::mnemonic
+pub fn find_mnemonic(key: char) -> impl Operation<MnemonicTarget> {
+    struct FindMnemonic {
+        key: char,
+        found: Option<MnemonicTarget>,
+    }
+
+    impl Operation<MnemonicTarget> for FindMnemonic {
+        fn accessible(&mut self, id: Option<&Id>, bounds: Rectangle, accessible: &Accessible<'_>) {
+            if self.found.is_some() {
+                return;
+            }
+
+            if let Some(mnemonic) = accessible.mnemonic
+                && mnemonic.eq_ignore_ascii_case(&self.key)
+                && !accessible.disabled
+            {
+                self.found = Some(MnemonicTarget {
+                    bounds,
+                    id: id.cloned(),
+                });
+            }
+        }
+
+        fn traverse(&mut self, operate: &mut dyn FnMut(&mut dyn Operation<MnemonicTarget>)) {
+            if self.found.is_none() {
+                operate(self);
+            }
+        }
+
+        fn finish(&self) -> Outcome<MnemonicTarget> {
+            match &self.found {
+                Some(target) => Outcome::Some(target.clone()),
+                None => Outcome::None,
+            }
+        }
+    }
+
+    FindMnemonic { key, found: None }
 }

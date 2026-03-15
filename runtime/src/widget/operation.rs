@@ -58,6 +58,26 @@ pub fn focus<T>(id: impl Into<Id>) -> Task<T> {
     task::effect(Action::widget(operation::focusable::focus(id.into())))
 }
 
+/// Focuses the next focusable widget within a specific container.
+///
+/// Only cycles focus among descendants of the container with the
+/// given [`Id`]. Used for modal dialog focus trapping.
+pub fn focus_next_within<T>(target: impl Into<Id>) -> Task<T> {
+    task::effect(Action::widget(operation::focusable::focus_next_within(
+        target.into(),
+    )))
+}
+
+/// Focuses the previous focusable widget within a specific container.
+///
+/// Only cycles focus among descendants of the container with the
+/// given [`Id`]. Used for modal dialog focus trapping.
+pub fn focus_previous_within<T>(target: impl Into<Id>) -> Task<T> {
+    task::effect(Action::widget(operation::focusable::focus_previous_within(
+        target.into(),
+    )))
+}
+
 /// Moves the cursor of the widget with the given [`Id`] to the end.
 pub fn move_cursor_to_end<T>(id: impl Into<Id>) -> Task<T> {
     task::effect(Action::widget(operation::text_input::move_cursor_to_end(
