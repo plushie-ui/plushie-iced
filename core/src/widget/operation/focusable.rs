@@ -586,7 +586,9 @@ where
                 return;
             }
 
-            let line_height = 20.0;
+            // Default line height for framework-level keyboard scrolling.
+            // The widget-level handler uses the renderer's text size instead.
+            let line_height = 16.0;
 
             match self.target.action {
                 ScrollAction::PageDown => {
