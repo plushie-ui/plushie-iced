@@ -212,4 +212,9 @@ pub struct Accessible<'a> {
     pub active_descendant: Option<&'a widget::Id>,
     /// The type of popup this widget triggers when activated.
     pub has_popup: Option<HasPopup>,
+    /// The IDs of all radio buttons in this radio group.
+    ///
+    /// Set on each radio button in a group so assistive technology
+    /// knows which buttons belong together.
+    pub radio_group: Option<&'a [widget::Id]>,
 }
