@@ -1000,7 +1000,7 @@ where
                     key: keyboard::Key::Named(named),
                     ..
                 }) if cursor_over_scrollable.is_some() => {
-                    let line_height = 20.0;
+                    let line_height = f32::from(renderer.default_size());
 
                     let delta = match named {
                         key::Named::PageDown => Some(Vector::new(0.0, bounds.height)),
