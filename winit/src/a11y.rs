@@ -335,6 +335,11 @@ pub struct A11yTree {
     pub node_map: HashMap<NodeId, (Option<widget::Id>, Rectangle)>,
     /// The currently focused [`NodeId`], if any.
     pub focused: Option<NodeId>,
+    /// The iced [`widget::Id`] of the innermost modal container, if any.
+    ///
+    /// When set, keyboard Tab cycling should be restricted to
+    /// descendants of this container via `handle_tab_within`.
+    pub modal_scope: Option<widget::Id>,
 }
 
 /// Builds an [`accesskit`] tree by walking the widget tree via the
@@ -361,6 +366,10 @@ pub struct TreeBuilder {
     radio_group_refs: Vec<(NodeId, Vec<widget::Id>)>,
     /// Pending `error_message` cross-node relationships to resolve in `build()`.
     error_msg_refs: Vec<(NodeId, widget::Id)>,
+    /// The iced widget ID of the innermost node with `modal: true`.
+    ///
+    /// Updated during tree walk; the last (deepest) modal node wins.
+    modal_scope: Option<widget::Id>,
 }
 
 impl TreeBuilder {
@@ -384,6 +393,7 @@ impl TreeBuilder {
             active_desc_refs: Vec::new(),
             radio_group_refs: Vec::new(),
             error_msg_refs: Vec::new(),
+            modal_scope: None,
         }
     }
 }
@@ -532,6 +542,7 @@ impl TreeBuilder {
             },
             node_map: self.node_map,
             focused: self.focused,
+            modal_scope: self.modal_scope,
         }
     }
 }
@@ -737,6 +748,11 @@ impl Operation for TreeBuilder {
         }
         if accessible.modal {
             node.set_modal();
+            // Track the innermost modal container for focus trapping.
+            // Requires a widget::Id so handle_tab_within can scope to it.
+            if let Some(wid) = id {
+                self.modal_scope = Some(wid.clone());
+            }
         }
         if let Some(ch) = accessible.mnemonic {
             node.set_keyboard_shortcut(format!("Alt+{}", ch.to_uppercase()));

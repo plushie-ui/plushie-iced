@@ -82,6 +82,8 @@ where
                 adapter: None,
                 #[cfg(feature = "a11y")]
                 a11y_node_map: std::collections::HashMap::new(),
+                #[cfg(feature = "a11y")]
+                modal_scope: None,
             },
         );
 
@@ -178,6 +180,13 @@ where
         accesskit::NodeId,
         (Option<crate::core::widget::Id>, crate::core::Rectangle),
     >,
+    /// The widget ID of the active modal container, if any.
+    ///
+    /// When set, Tab/Shift+Tab focus cycling is restricted to
+    /// descendants of this container. Updated from the a11y tree
+    /// build when the `a11y` feature is enabled.
+    #[cfg(feature = "a11y")]
+    pub modal_scope: Option<crate::core::widget::Id>,
 }
 
 impl<P, C> Window<P, C>

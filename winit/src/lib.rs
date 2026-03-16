@@ -1259,16 +1259,40 @@ async fn run_instance<P>(
                                     let ui =
                                         user_interfaces.get_mut(&id).expect("Get user interface");
 
-                                    if runtime::keyboard::handle_ctrl_tab(
-                                        &event,
-                                        ui,
-                                        &window.renderer,
-                                    ) || runtime::keyboard::handle_tab(
+                                    // Ctrl+Tab always escapes focus traps.
+                                    // Plain Tab respects modal scope when present.
+                                    #[cfg(feature = "a11y")]
+                                    let tab_handled = match window.modal_scope {
+                                        Some(ref scope) => {
+                                            runtime::keyboard::handle_tab_within(
+                                                &event,
+                                                status,
+                                                ui,
+                                                &window.renderer,
+                                                scope.clone(),
+                                            )
+                                        }
+                                        None => runtime::keyboard::handle_tab(
+                                            &event,
+                                            status,
+                                            ui,
+                                            &window.renderer,
+                                        ),
+                                    };
+                                    #[cfg(not(feature = "a11y"))]
+                                    let tab_handled = runtime::keyboard::handle_tab(
                                         &event,
                                         status,
                                         ui,
                                         &window.renderer,
-                                    ) || runtime::keyboard::handle_scroll_keys(
+                                    );
+
+                                    if runtime::keyboard::handle_ctrl_tab(
+                                        &event,
+                                        ui,
+                                        &window.renderer,
+                                    ) || tab_handled
+                                    || runtime::keyboard::handle_scroll_keys(
                                         &event,
                                         status,
                                         ui,
@@ -1386,6 +1410,7 @@ async fn run_instance<P>(
                                     ui.operate(&window.renderer, &mut builder);
                                     let tree = builder.build();
                                     window.a11y_node_map = tree.node_map;
+                                    window.modal_scope = tree.modal_scope;
                                     adapter.update_if_active(|| tree.update);
                                 }
                             }
