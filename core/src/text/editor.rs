@@ -93,12 +93,16 @@ pub enum Action {
         /// The amount of lines to scroll.
         lines: i32,
     },
+    /// Undo the last editing action.
+    Undo,
+    /// Redo a previously undone editing action.
+    Redo,
 }
 
 impl Action {
     /// Returns whether the [`Action`] is an editing action.
     pub fn is_edit(&self) -> bool {
-        matches!(self, Self::Edit(_))
+        matches!(self, Self::Edit(_) | Self::Undo | Self::Redo)
     }
 }
 

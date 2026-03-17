@@ -818,6 +818,12 @@ where
                             Binding::Delete => {
                                 publish(Action::Edit(Edit::Delete));
                             }
+                            Binding::Undo => {
+                                publish(Action::Undo);
+                            }
+                            Binding::Redo => {
+                                publish(Action::Redo);
+                            }
                             Binding::Sequence(sequence) => {
                                 for binding in sequence {
                                     apply_binding(binding, content, state, on_edit, shell);
@@ -1090,6 +1096,10 @@ pub enum Binding<Message> {
     Backspace,
     /// Delete the next character.
     Delete,
+    /// Undo the last editing action.
+    Undo,
+    /// Redo a previously undone editing action.
+    Redo,
     /// A sequence of bindings to execute.
     Sequence(Vec<Self>),
     /// Produce the given message.
@@ -1140,6 +1150,9 @@ impl<Message> Binding<Message> {
             Some('x') if modifiers.command() => Some(Self::Cut),
             Some('v') if modifiers.command() && !modifiers.alt() => Some(Self::Paste),
             Some('a') if modifiers.command() => Some(Self::SelectAll),
+            Some('z') if modifiers.command() && modifiers.shift() => Some(Self::Redo),
+            Some('z') if modifiers.command() => Some(Self::Undo),
+            Some('y') if modifiers.command() => Some(Self::Redo),
             _ => None,
         };
 

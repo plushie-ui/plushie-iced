@@ -13,6 +13,20 @@ use std::borrow::Cow;
 use std::fmt;
 use std::sync::{self, Arc, RwLock};
 
+/// Maximum number of undo snapshots to retain.
+const UNDO_LIMIT: usize = 200;
+
+/// A snapshot of editor state for undo/redo.
+#[derive(Clone)]
+struct Snapshot {
+    /// Full text content of the buffer.
+    text: String,
+    /// Cursor position at the time of the snapshot.
+    cursor: cosmic_text::Cursor,
+    /// Selection state at the time of the snapshot.
+    selection: cosmic_text::Selection,
+}
+
 /// A multi-line text editor.
 #[derive(Debug, PartialEq)]
 pub struct Editor(Option<Arc<Internal>>);
@@ -26,6 +40,8 @@ struct Internal {
     hint: bool,
     hint_factor: f32,
     version: text::Version,
+    undo_stack: Vec<Snapshot>,
+    redo_stack: Vec<Snapshot>,
 }
 
 impl Editor {
@@ -289,11 +305,11 @@ impl editor::Editor for Editor {
         let mut font_system = text::font_system().write().expect("Write font system");
 
         self.with_internal_mut(|internal| {
-            let editor = &mut internal.editor;
-
             match action {
                 // Motion events
                 Action::Move(motion) => {
+                    let editor = &mut internal.editor;
+
                     if let Some((start, end)) = editor.selection_bounds() {
                         editor.set_selection(cosmic_text::Selection::None);
 
@@ -325,6 +341,7 @@ impl editor::Editor for Editor {
 
                 // Selection events
                 Action::Select(motion) => {
+                    let editor = &mut internal.editor;
                     let cursor = editor.cursor();
 
                     if editor.selection_bounds().is_none() {
@@ -345,16 +362,17 @@ impl editor::Editor for Editor {
                     }
                 }
                 Action::SelectWord => {
-                    let cursor = editor.cursor();
+                    let cursor = internal.editor.cursor();
 
-                    editor.set_selection(cosmic_text::Selection::Word(cursor));
+                    internal.editor.set_selection(cosmic_text::Selection::Word(cursor));
                 }
                 Action::SelectLine => {
-                    let cursor = editor.cursor();
+                    let cursor = internal.editor.cursor();
 
-                    editor.set_selection(cosmic_text::Selection::Line(cursor));
+                    internal.editor.set_selection(cosmic_text::Selection::Line(cursor));
                 }
                 Action::SelectAll => {
+                    let editor = &mut internal.editor;
                     let buffer = buffer_from_editor(editor);
 
                     if buffer.lines.len() > 1
@@ -380,6 +398,11 @@ impl editor::Editor for Editor {
 
                 // Editing events
                 Action::Edit(edit) => {
+                    // Capture state before the edit for undo
+                    internal.push_undo();
+
+                    let editor = &mut internal.editor;
+
                     let topmost_line_before_edit = editor
                         .selection_bounds()
                         .map(|(start, _)| start)
@@ -420,9 +443,29 @@ impl editor::Editor for Editor {
                         Some(selection_start.line.min(topmost_line_before_edit));
                 }
 
+                // Undo/Redo
+                Action::Undo => {
+                    if let Some(snapshot) = internal.undo_stack.pop() {
+                        // Save current state to redo stack before restoring
+                        let current = internal.snapshot();
+                        internal.redo_stack.push(current);
+
+                        internal.restore_snapshot(&snapshot, font_system.raw());
+                    }
+                }
+                Action::Redo => {
+                    if let Some(snapshot) = internal.redo_stack.pop() {
+                        // Save current state to undo stack before restoring
+                        let current = internal.snapshot();
+                        internal.undo_stack.push(current);
+
+                        internal.restore_snapshot(&snapshot, font_system.raw());
+                    }
+                }
+
                 // Mouse events
                 Action::Click(position) => {
-                    editor.action(
+                    internal.editor.action(
                         font_system.raw(),
                         cosmic_text::Action::Click {
                             x: (position.x * internal.hint_factor) as i32,
@@ -431,7 +474,7 @@ impl editor::Editor for Editor {
                     );
                 }
                 Action::Drag(position) => {
-                    editor.action(
+                    internal.editor.action(
                         font_system.raw(),
                         cosmic_text::Action::Drag {
                             x: (position.x * internal.hint_factor) as i32,
@@ -440,14 +483,16 @@ impl editor::Editor for Editor {
                     );
 
                     // Deselect if selection matches cursor position
-                    if let Some((start, end)) = editor.selection_bounds()
+                    if let Some((start, end)) = internal.editor.selection_bounds()
                         && start.line == end.line
                         && start.index == end.index
                     {
-                        editor.set_selection(cosmic_text::Selection::None);
+                        internal.editor.set_selection(cosmic_text::Selection::None);
                     }
                 }
                 Action::Scroll { lines } => {
+                    let editor = &mut internal.editor;
+
                     editor.action(
                         font_system.raw(),
                         cosmic_text::Action::Scroll {
@@ -718,6 +763,8 @@ impl Default for Internal {
             hint: false,
             hint_factor: 1.0,
             version: text::Version::default(),
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
         }
     }
 }
@@ -814,6 +861,78 @@ fn visual_lines_offset(line: usize, buffer: &cosmic_text::Buffer) -> i32 {
         .sum();
 
     visual_lines_offset as i32 * if scroll.line < line { 1 } else { -1 }
+}
+
+/// Extract the full text from a cosmic_text buffer, preserving line endings.
+fn text_from_buffer(buffer: &cosmic_text::Buffer) -> String {
+    let mut text = String::new();
+    let line_count = buffer.lines.len();
+
+    for (i, line) in buffer.lines.iter().enumerate() {
+        text.push_str(line.text());
+        if i + 1 < line_count {
+            let ending = match line.ending() {
+                cosmic_text::LineEnding::CrLf => "\r\n",
+                cosmic_text::LineEnding::Cr => "\r",
+                cosmic_text::LineEnding::LfCr => "\n\r",
+                cosmic_text::LineEnding::None | cosmic_text::LineEnding::Lf => "\n",
+            };
+            text.push_str(ending);
+        }
+    }
+
+    text
+}
+
+impl Internal {
+    /// Capture a snapshot of the current editor state.
+    fn snapshot(&self) -> Snapshot {
+        let buffer = buffer_from_editor(&self.editor);
+        Snapshot {
+            text: text_from_buffer(buffer),
+            cursor: self.editor.cursor(),
+            selection: self.editor.selection(),
+        }
+    }
+
+    /// Push the current state onto the undo stack (called before edits).
+    fn push_undo(&mut self) {
+        let snap = self.snapshot();
+
+        if self.undo_stack.len() >= UNDO_LIMIT {
+            let _ = self.undo_stack.remove(0);
+        }
+
+        self.undo_stack.push(snap);
+        self.redo_stack.clear();
+    }
+
+    /// Restore a snapshot into the editor.
+    fn restore_snapshot(
+        &mut self,
+        snapshot: &Snapshot,
+        font_system: &mut cosmic_text::FontSystem,
+    ) {
+        let buffer = buffer_mut_from_editor(&mut self.editor);
+
+        buffer.set_text(
+            font_system,
+            &snapshot.text,
+            &cosmic_text::Attrs::new(),
+            cosmic_text::Shaping::Advanced,
+            None,
+        );
+
+        // Restore font attributes on all lines
+        let font_attrs = crate::text::to_attributes(self.font);
+        for line in buffer.lines.iter_mut() {
+            let _ = line.set_attrs_list(cosmic_text::AttrsList::new(&font_attrs));
+        }
+
+        self.editor.set_cursor(snapshot.cursor);
+        self.editor.set_selection(snapshot.selection);
+        self.topmost_line_changed = Some(0);
+    }
 }
 
 fn to_motion(motion: Motion) -> cosmic_text::Motion {
