@@ -473,31 +473,68 @@ struct ScrollAdjustment {
     offset: AbsoluteOffset<Option<f32>>,
 }
 
+/// Margin added when scrolling a focused widget into view. Ensures the
+/// widget isn't flush against the scrollable edge or hidden behind a
+/// scrollbar.
+const SCROLL_MARGIN: f32 = 12.0;
+
 /// Computes the scroll offset needed to bring `target` into view within
-/// a scrollable defined by `sb` (bounds) and `t` (translation).
+/// a scrollable defined by `sb` (bounds), `content_bounds`, and `t`
+/// (current translation / scroll offset).
+///
+/// Subtracts scrollbar thickness from the visible area when scrollbars
+/// are present (detected via content overflow). Adds [`SCROLL_MARGIN`]
+/// around the target so it isn't flush against the viewport edge.
 ///
 /// Returns `None` if `target` is already fully visible.
 fn compute_scroll_to(
     sb: Rectangle,
+    content_bounds: Rectangle,
     t: Vector,
     target: Rectangle,
 ) -> Option<AbsoluteOffset<Option<f32>>> {
-    let rx = target.x - sb.x + t.x;
-    let ry = target.y - sb.y + t.y;
+    // Convert target position to content-space coordinates.
+    // layout.bounds() in operate() returns absolute positions WITHOUT
+    // scroll translation (translation is only applied during draw).
+    // Subtracting the scrollable origin gives the content-space position.
+    let cx = target.x - sb.x;
+    let cy = target.y - sb.y;
+
+    // Compute visible viewport dimensions. When content overflows on one
+    // axis, a scrollbar appears on the OTHER axis and reduces the viewport.
+    // Default scrollbar width in iced is 10px + margin; we use a
+    // conservative estimate that covers common configurations.
+    let scrollbar_reserved = 12.0;
+
+    let has_h_scrollbar = content_bounds.width > sb.width;
+    let has_v_scrollbar = content_bounds.height > sb.height;
+
+    let visible_w = if has_v_scrollbar {
+        sb.width - scrollbar_reserved
+    } else {
+        sb.width
+    };
+    let visible_h = if has_h_scrollbar {
+        sb.height - scrollbar_reserved
+    } else {
+        sb.height
+    };
 
     let mut offset_x = None;
     let mut offset_y = None;
 
-    if target.width >= sb.width || rx < t.x {
-        offset_x = Some(rx);
-    } else if rx + target.width > t.x + sb.width {
-        offset_x = Some(rx + target.width - sb.width);
+    // Check if target is outside the visible viewport [t, t + visible].
+    // cx/cy is the content-space position; t is the current scroll offset.
+    if target.width >= visible_w || cx < t.x {
+        offset_x = Some((cx - SCROLL_MARGIN).max(0.0));
+    } else if cx + target.width > t.x + visible_w {
+        offset_x = Some(cx + target.width - visible_w + SCROLL_MARGIN);
     }
 
-    if target.height >= sb.height || ry < t.y {
-        offset_y = Some(ry);
-    } else if ry + target.height > t.y + sb.height {
-        offset_y = Some(ry + target.height - sb.height);
+    if target.height >= visible_h || cy < t.y {
+        offset_y = Some((cy - SCROLL_MARGIN).max(0.0));
+    } else if cy + target.height > t.y + visible_h {
+        offset_y = Some(cy + target.height - visible_h + SCROLL_MARGIN);
     }
 
     if offset_x.is_some() || offset_y.is_some() {
@@ -573,9 +610,12 @@ where
             let mut target_bounds = focused;
 
             for ancestor in self.focused_ancestors.iter().rev() {
-                if let Some(offset) =
-                    compute_scroll_to(ancestor.bounds, ancestor.translation, target_bounds)
-                {
+                if let Some(offset) = compute_scroll_to(
+                    ancestor.bounds,
+                    ancestor.content_bounds,
+                    ancestor.translation,
+                    target_bounds,
+                ) {
                     adjustments.push(ScrollAdjustment {
                         scrollable_bounds: ancestor.bounds,
                         offset,
@@ -998,4 +1038,97 @@ pub fn find_mnemonic(key: char) -> impl Operation<MnemonicTarget> {
     }
 
     FindMnemonic { key, found: None }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Point, Size};
+
+    fn rect(x: f32, y: f32, w: f32, h: f32) -> Rectangle {
+        Rectangle::new(Point::new(x, y), Size::new(w, h))
+    }
+
+    fn vec2(x: f32, y: f32) -> Vector {
+        Vector::new(x, y)
+    }
+
+    // All tests use content-space coordinates for target bounds, matching
+    // what the real widget tree provides: layout.bounds() in operate()
+    // returns positions WITHOUT scroll translation applied.
+
+    #[test]
+    fn both_scrollbars_reduce_visible_area() {
+        // Content overflows both axes -> both scrollbars present.
+        // Target at right edge: fits in full viewport but is hidden
+        // behind the vertical scrollbar's reserved space.
+        let sb = rect(0.0, 0.0, 400.0, 300.0);
+        let content = rect(0.0, 0.0, 600.0, 800.0);
+
+        // 400 - 12 (scrollbar) - 50 (target width) + 1 = just past the edge
+        let target = rect(339.0, 50.0, 50.0, 40.0);
+        let result = compute_scroll_to(sb, content, vec2(0.0, 0.0), target);
+
+        assert!(
+            result.is_some(),
+            "should scroll when target is behind scrollbar"
+        );
+        assert!(result.unwrap().x.expect("horizontal scroll") > 0.0);
+    }
+
+    #[test]
+    fn sequential_tab_forward_and_backward() {
+        // Both-direction scrollable (400x200) with content (600x800).
+        // Both scrollbars present. Buttons at content y=10, y=300, y=600.
+        //
+        // Target bounds are content-space positions (layout.bounds()
+        // in operate() does NOT include scroll translation).
+
+        let sb = rect(0.0, 0.0, 400.0, 200.0);
+        let content = rect(0.0, 0.0, 600.0, 800.0);
+
+        let btn1 = rect(50.0, 10.0, 100.0, 40.0);
+        let btn2 = rect(50.0, 300.0, 100.0, 40.0);
+        let btn3 = rect(50.0, 600.0, 100.0, 40.0);
+
+        // Tab to btn1 at scroll=0: content y=10 is within [0, 188]
+        let r1 = compute_scroll_to(sb, content, vec2(0.0, 0.0), btn1);
+        assert!(r1.is_none(), "btn1 should be visible at scroll=0");
+
+        // Tab to btn2: content y=300 is below [0, 188]
+        let r2 = compute_scroll_to(sb, content, vec2(0.0, 0.0), btn2).unwrap();
+        let scroll_y = r2.y.expect("should scroll to btn2");
+        // trailing: 300 + 40 - 188 + 12 = 164
+        assert!(
+            (scroll_y - 164.0).abs() < 0.1,
+            "btn2: expected ~164, got {scroll_y}"
+        );
+
+        // Tab to btn3: content y=600 is below [164, 352]
+        let r3 = compute_scroll_to(sb, content, vec2(0.0, scroll_y), btn3).unwrap();
+        let scroll_y = r3.y.expect("should scroll to btn3");
+        // trailing: 600 + 40 - 188 + 12 = 464
+        assert!(
+            (scroll_y - 464.0).abs() < 0.1,
+            "btn3: expected ~464, got {scroll_y}"
+        );
+
+        // Shift+Tab back to btn2: content y=300 is ABOVE [464, 652]
+        let r4 = compute_scroll_to(sb, content, vec2(0.0, scroll_y), btn2).unwrap();
+        let scroll_y = r4.y.expect("should scroll back to btn2");
+        // leading: (300 - 12).max(0) = 288
+        assert!(
+            (scroll_y - 288.0).abs() < 0.1,
+            "back to btn2: expected ~288, got {scroll_y}"
+        );
+
+        // Shift+Tab back to btn1: content y=10 is ABOVE [288, 476]
+        let r5 = compute_scroll_to(sb, content, vec2(0.0, scroll_y), btn1).unwrap();
+        let scroll_y = r5.y.expect("should scroll back to btn1");
+        // leading: (10 - 12).max(0) = 0
+        assert!(
+            (scroll_y - 0.0).abs() < 0.1,
+            "back to btn1: expected ~0, got {scroll_y}"
+        );
+    }
 }

@@ -125,10 +125,26 @@ of how focus was gained.
 ### Focus styling
 
 Each widget's theme Catalog provides styling for the Focused status
-variant. The default themes use a 2px border in the primary strong
-color. Slider focus indication uses the handle border rather than the
-overall widget border. Custom themes can provide any visual treatment
-by implementing the Focused match arm in their style functions.
+variant. The default themes use a consistent focus color derived from
+the palette:
+
+- **`focus_color(accent, page_bg)`** picks a single base color that
+  contrasts with the page background. All widgets share this base.
+- **`focus_border_color(widget_bg, accent, page_bg)`** uses the base
+  when it contrasts with the widget. When they blend (e.g. an
+  accent-colored button), the color is deviated (lightened/darkened
+  in oklch) to create a visible border in the same hue family.
+- **`focus_shadow(accent, page_bg)`** builds a prominent glow ring
+  (0.85 opacity, 10px blur) for compact widgets like slider handles,
+  radio buttons, checkboxes, and togglers.
+- **`focus_shadow_subtle(accent, page_bg)`** is a less prominent
+  variant (0.75 opacity, 6px blur) for large widgets like buttons,
+  text inputs, and pick lists.
+
+The shadow extends beyond the widget bounds and provides visibility
+even when the border blends with a same-colored widget. Custom themes
+can provide any visual treatment by implementing the Focused match
+arm in their style functions.
 
 ---
 
@@ -154,6 +170,12 @@ All interactive widgets respond to keyboard input when focused:
 | PickList (open) | Space, Enter | Select hovered option and close |
 | PickList (open) | Escape | Close dropdown, keep focus |
 | PickList (open) | Tab | Close dropdown, move focus |
+| ComboBox (open) | Arrow Down/Up | Navigate filtered options |
+| ComboBox (open) | Enter | Select highlighted option, dismiss menu |
+| ComboBox (open) | Tab | Autocomplete: select highlighted option, dismiss menu, keep focus |
+| ComboBox (open) | Escape | Close dropdown, keep focus |
+| ComboBox (dismissed) | Tab | Move focus to next widget |
+| ComboBox (dismissed) | Enter | No-op (passes through) |
 | All focusable | Escape | Unfocuses the widget |
 | All focusable | Ctrl+Tab | Move to next widget (unconditional) |
 | All focusable | Ctrl+Shift+Tab | Move to previous widget (unconditional) |
@@ -270,6 +292,29 @@ After Tab navigation moves focus to a new widget, the framework
 scrolls any ancestor scrollable to bring the focused widget into
 the visible area. This runs automatically as a follow-up operation
 after focus_next or focus_previous -- no application code is needed.
+
+### Coordinate space
+
+The focused widget's bounds come from `layout.bounds()` in the
+scrollable's `operate()` method. These are **content-space**
+positions -- the scrollable origin is included but scroll translation
+is not (translation is only applied during draw). The scroll offset
+calculation subtracts the scrollable origin to get the widget's
+position within the content, then compares against the current
+scroll range `[translation, translation + visible_size]`.
+
+This means both forward and backward scrolling work correctly: a
+widget above the current viewport has a content-space position less
+than the current scroll offset, triggering a leading-edge scroll.
+
+### Scrollbar compensation and margin
+
+When content overflows on one axis, a scrollbar appears on the
+**other** axis and reduces the visible viewport. The scroll
+calculation subtracts an estimated scrollbar thickness (12px) from
+the cross-axis dimension. A 12px scroll margin is added around the
+target widget so it isn't flush against the viewport edge or hidden
+behind a scrollbar.
 
 ### Cascade algorithm
 
