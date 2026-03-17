@@ -73,6 +73,8 @@ pub struct Content {
     items: Vec<Item>,
     incomplete: HashMap<usize, Section>,
     state: State,
+    #[cfg(feature = "highlighter")]
+    code_theme: Option<iced_highlighter::Theme>,
 }
 
 #[derive(Debug)]
@@ -94,6 +96,17 @@ impl Content {
         content
     }
 
+    /// Sets the syntax highlighting theme for code blocks.
+    ///
+    /// This only has an effect when the `highlighter` feature is enabled.
+    /// Existing code blocks are not re-highlighted; call this before
+    /// [`push_str`](Self::push_str).
+    #[cfg(feature = "highlighter")]
+    pub fn code_theme(mut self, theme: iced_highlighter::Theme) -> Self {
+        self.code_theme = Some(theme);
+        self
+    }
+
     /// Pushes more Markdown into the [`Content`]; parsing incrementally!
     ///
     /// This is specially useful when you have long streams of Markdown; like
@@ -101,6 +114,11 @@ impl Content {
     pub fn push_str(&mut self, markdown: &str) {
         if markdown.is_empty() {
             return;
+        }
+
+        #[cfg(feature = "highlighter")]
+        {
+            self.state.code_theme = self.code_theme;
         }
 
         // Append to last leftover text
@@ -153,6 +171,8 @@ impl Content {
                         images: HashSet::new(),
                         #[cfg(feature = "highlighter")]
                         highlighter: None,
+                        #[cfg(feature = "highlighter")]
+                        code_theme: self.code_theme,
                     };
 
                     if let Some((item, _source, _broken_links)) =
@@ -430,6 +450,8 @@ struct State {
     images: HashSet<Uri>,
     #[cfg(feature = "highlighter")]
     highlighter: Option<Highlighter>,
+    #[cfg(feature = "highlighter")]
+    code_theme: Option<iced_highlighter::Theme>,
 }
 
 #[cfg(feature = "highlighter")]
@@ -443,11 +465,11 @@ struct Highlighter {
 
 #[cfg(feature = "highlighter")]
 impl Highlighter {
-    pub fn new(language: &str) -> Self {
+    pub fn new(language: &str, theme: iced_highlighter::Theme) -> Self {
         Self {
             lines: Vec::new(),
             parser: iced_highlighter::Stream::new(&iced_highlighter::Settings {
-                theme: iced_highlighter::Theme::Base16Ocean,
+                theme,
                 token: language.to_owned(),
             }),
             language: language.to_owned(),
@@ -682,13 +704,20 @@ fn parse_with<'a>(
                 #[cfg(feature = "highlighter")]
                 {
                     highlighter = Some({
+                        let code_theme = state
+                            .borrow()
+                            .code_theme
+                            .unwrap_or(iced_highlighter::Theme::Base16Ocean);
                         let mut highlighter = state
                             .borrow_mut()
                             .highlighter
                             .take()
                             .filter(|highlighter| highlighter.language == language.as_ref())
                             .unwrap_or_else(|| {
-                                Highlighter::new(language.split(',').next().unwrap_or_default())
+                                Highlighter::new(
+                                    language.split(',').next().unwrap_or_default(),
+                                    code_theme,
+                                )
                             });
 
                         highlighter.prepare();
