@@ -1,13 +1,11 @@
-use iced::keyboard;
 use iced::widget::{
     button, center_x, center_y, checkbox, column, container, pick_list, progress_bar, row, rule,
     scrollable, slider, space, text, text_input, toggler,
 };
-use iced::{Center, Element, Fill, Shrink, Subscription, Theme};
+use iced::{Center, Element, Fill, Shrink, Theme};
 
 pub fn main() -> iced::Result {
     iced::application(Styling::default, Styling::update, Styling::view)
-        .subscription(Styling::subscription)
         .theme(Styling::theme)
         .run()
 }
@@ -29,9 +27,6 @@ enum Message {
     SliderChanged(f32),
     CheckboxToggled(bool),
     TogglerToggled(bool),
-    PreviousTheme,
-    NextTheme,
-    ClearTheme,
 }
 
 impl Styling {
@@ -45,30 +40,6 @@ impl Styling {
             Message::SliderChanged(value) => self.slider_value = value,
             Message::CheckboxToggled(value) => self.checkbox_value = value,
             Message::TogglerToggled(value) => self.toggler_value = value,
-            Message::PreviousTheme | Message::NextTheme => {
-                let current = Theme::ALL
-                    .iter()
-                    .position(|candidate| self.theme.as_ref() == Some(candidate));
-
-                self.theme = Some(if matches!(message, Message::NextTheme) {
-                    Theme::ALL[current.map(|current| current + 1).unwrap_or(0) % Theme::ALL.len()]
-                        .clone()
-                } else {
-                    let current = current.unwrap_or(0);
-
-                    if current == 0 {
-                        Theme::ALL
-                            .last()
-                            .expect("Theme::ALL must not be empty")
-                            .clone()
-                    } else {
-                        Theme::ALL[current - 1].clone()
-                    }
-                });
-            }
-            Message::ClearTheme => {
-                self.theme = None;
-            }
         }
     }
 
@@ -166,30 +137,6 @@ impl Styling {
         center_y(scrollable(center_x(content)).spacing(10))
             .padding(10)
             .into()
-    }
-
-    fn subscription(&self) -> Subscription<Message> {
-        keyboard::listen().filter_map(|event| {
-            let keyboard::Event::KeyPressed {
-                modified_key: keyboard::Key::Named(modified_key),
-                repeat: false,
-                ..
-            } = event
-            else {
-                return None;
-            };
-
-            match modified_key {
-                keyboard::key::Named::ArrowUp | keyboard::key::Named::ArrowLeft => {
-                    Some(Message::PreviousTheme)
-                }
-                keyboard::key::Named::ArrowDown | keyboard::key::Named::ArrowRight => {
-                    Some(Message::NextTheme)
-                }
-                keyboard::key::Named::Space => Some(Message::ClearTheme),
-                _ => None,
-            }
-        })
     }
 
     fn theme(&self) -> Option<Theme> {
