@@ -44,8 +44,10 @@ use crate::core::widget::operation::accessible::{Accessible, Orientation, Role, 
 use crate::core::widget::operation::focusable::Focusable;
 use crate::core::widget::tree::{self, Tree};
 use crate::core::window;
+use crate::core::theme::palette;
 use crate::core::{
-    self, Color, Element, Event, Length, Pixels, Point, Rectangle, Shell, Size, Theme, Widget,
+    self, Color, Element, Event, Length, Pixels, Point, Rectangle, Shadow, Shell, Size, Theme,
+    Widget,
 };
 
 /// An vertical bar and a handle that selects a single value from a range of
@@ -601,6 +603,7 @@ where
                     width: style.handle.border_width,
                     color: style.handle.border_color,
                 },
+                shadow: style.handle.shadow,
                 ..renderer::Quad::default()
             },
             style.handle.background,
@@ -758,12 +761,19 @@ pub fn default(theme: &Theme, status: Status) -> Style {
             shape: HandleShape::Circle { radius: 7.0 },
             background: color.into(),
             border_color: match status {
-                Status::Focused => palette.primary.strong.color,
+                Status::Focused => {
+                    let accent = palette.primary.strong.color;
+                    palette::focus_border_color(color, palette.primary.base.text, accent)
+                }
                 _ => Color::TRANSPARENT,
             },
             border_width: match status {
                 Status::Focused => 2.0,
                 _ => 0.0,
+            },
+            shadow: match status {
+                Status::Focused => palette::focus_shadow(palette.primary.strong.color),
+                _ => Shadow::default(),
             },
         },
     }

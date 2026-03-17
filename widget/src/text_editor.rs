@@ -48,9 +48,10 @@ use crate::core::widget::operation;
 use crate::core::widget::operation::accessible::{Accessible, Role, Value};
 use crate::core::widget::{self, Widget};
 use crate::core::window;
+use crate::core::theme::palette;
 use crate::core::{
     Background, Border, Color, Element, Event, InputMethod, Length, Padding, Pixels, Point,
-    Rectangle, Shell, Size, SmolStr, Theme, Vector,
+    Rectangle, Shadow, Shell, Size, SmolStr, Theme, Vector,
 };
 
 use std::borrow::Cow;
@@ -923,6 +924,7 @@ where
             renderer::Quad {
                 bounds,
                 border: style.border,
+                shadow: style.shadow,
                 ..renderer::Quad::default()
             },
             style.background,
@@ -1386,6 +1388,8 @@ pub struct Style {
     pub value: Color,
     /// The [`Color`] of the selection of the text input.
     pub selection: Color,
+    /// The [`Shadow`] of the text editor.
+    pub shadow: Shadow,
 }
 
 /// The theme catalog of a [`TextEditor`].
@@ -1429,6 +1433,7 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         placeholder: palette.secondary.base.color,
         value: palette.background.base.text,
         selection: palette.primary.weak.color,
+        shadow: Shadow::default(),
     };
 
     match status {
@@ -1443,8 +1448,10 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         Status::Focused { .. } => Style {
             border: Border {
                 color: palette.primary.strong.color,
+                width: 2.0,
                 ..active.border
             },
+            shadow: palette::focus_shadow(palette.primary.strong.color),
             ..active
         },
         Status::Disabled => Style {

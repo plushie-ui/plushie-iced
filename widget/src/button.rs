@@ -667,14 +667,7 @@ pub fn primary(theme: &Theme, status: Status) -> Style {
             background: Some(Background::Color(palette.primary.strong.color)),
             ..base
         },
-        Status::Focused => Style {
-            border: Border {
-                color: palette.primary.strong.color,
-                width: 2.0,
-                ..base.border
-            },
-            ..base
-        },
+        Status::Focused => focused(base, palette.primary.base, &palette),
         Status::Disabled => disabled(base),
     }
 }
@@ -690,14 +683,7 @@ pub fn secondary(theme: &Theme, status: Status) -> Style {
             background: Some(Background::Color(palette.secondary.strong.color)),
             ..base
         },
-        Status::Focused => Style {
-            border: Border {
-                color: palette.primary.strong.color,
-                width: 2.0,
-                ..base.border
-            },
-            ..base
-        },
+        Status::Focused => focused(base, palette.secondary.base, &palette),
         Status::Disabled => disabled(base),
     }
 }
@@ -713,14 +699,7 @@ pub fn success(theme: &Theme, status: Status) -> Style {
             background: Some(Background::Color(palette.success.strong.color)),
             ..base
         },
-        Status::Focused => Style {
-            border: Border {
-                color: palette.primary.strong.color,
-                width: 2.0,
-                ..base.border
-            },
-            ..base
-        },
+        Status::Focused => focused(base, palette.success.base, &palette),
         Status::Disabled => disabled(base),
     }
 }
@@ -736,14 +715,7 @@ pub fn warning(theme: &Theme, status: Status) -> Style {
             background: Some(Background::Color(palette.warning.strong.color)),
             ..base
         },
-        Status::Focused => Style {
-            border: Border {
-                color: palette.primary.strong.color,
-                width: 2.0,
-                ..base.border
-            },
-            ..base
-        },
+        Status::Focused => focused(base, palette.warning.base, &palette),
         Status::Disabled => disabled(base),
     }
 }
@@ -759,14 +731,7 @@ pub fn danger(theme: &Theme, status: Status) -> Style {
             background: Some(Background::Color(palette.danger.strong.color)),
             ..base
         },
-        Status::Focused => Style {
-            border: Border {
-                color: palette.primary.strong.color,
-                width: 2.0,
-                ..base.border
-            },
-            ..base
-        },
+        Status::Focused => focused(base, palette.danger.base, &palette),
         Status::Disabled => disabled(base),
     }
 }
@@ -786,14 +751,7 @@ pub fn text(theme: &Theme, status: Status) -> Style {
             text_color: palette.background.base.text.scale_alpha(0.8),
             ..base
         },
-        Status::Focused => Style {
-            border: Border {
-                color: palette.primary.strong.color,
-                width: 2.0,
-                ..border::rounded(2)
-            },
-            ..base
-        },
+        Status::Focused => focused(base, palette.background.base, &palette),
         Status::Disabled => disabled(base),
     }
 }
@@ -813,14 +771,7 @@ pub fn background(theme: &Theme, status: Status) -> Style {
             background: Some(Background::Color(palette.background.weak.color)),
             ..base
         },
-        Status::Focused => Style {
-            border: Border {
-                color: palette.primary.strong.color,
-                width: 2.0,
-                ..base.border
-            },
-            ..base
-        },
+        Status::Focused => focused(base, palette.background.base, &palette),
         Status::Disabled => disabled(base),
     }
 }
@@ -840,14 +791,7 @@ pub fn subtle(theme: &Theme, status: Status) -> Style {
             background: Some(Background::Color(palette.background.weaker.color)),
             ..base
         },
-        Status::Focused => Style {
-            border: Border {
-                color: palette.primary.strong.color,
-                width: 2.0,
-                ..base.border
-            },
-            ..base
-        },
+        Status::Focused => focused(base, palette.background.weakest, &palette),
         Status::Disabled => disabled(base),
     }
 }
@@ -858,6 +802,21 @@ fn styled(pair: palette::Pair) -> Style {
         text_color: pair.text,
         border: border::rounded(2),
         ..Style::default()
+    }
+}
+
+fn focused(base: Style, pair: palette::Pair, palette: &palette::Palette) -> Style {
+    let accent = palette.primary.strong.color;
+    let border_color = palette::focus_border_color(pair.color, pair.text, accent);
+
+    Style {
+        border: Border {
+            color: border_color,
+            width: 2.0,
+            ..base.border
+        },
+        shadow: palette::focus_shadow(accent),
+        ..base
     }
 }
 

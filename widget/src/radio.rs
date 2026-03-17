@@ -70,9 +70,10 @@ use crate::core::widget::operation::accessible::{Accessible, Role};
 use crate::core::widget::operation::focusable::Focusable;
 use crate::core::widget::tree::{self, Tree};
 use crate::core::window;
+use crate::core::theme::palette;
 use crate::core::{
-    Background, Color, Element, Event, Layout, Length, Pixels, Rectangle, Shell, Size, Theme,
-    Widget,
+    Background, Color, Element, Event, Layout, Length, Pixels, Rectangle, Shadow, Shell, Size,
+    Theme, Widget,
 };
 
 /// A circular button representing a choice.
@@ -489,6 +490,7 @@ where
                         width: style.border_width,
                         color: style.border_color,
                     },
+                    shadow: style.shadow,
                     ..renderer::Quad::default()
                 },
                 style.background,
@@ -574,6 +576,8 @@ pub struct Style {
     pub border_color: Color,
     /// The text [`Color`] of the radio button.
     pub text_color: Option<Color>,
+    /// The [`Shadow`] of the radio button.
+    pub shadow: Shadow,
 }
 
 /// The theme catalog of a [`Radio`].
@@ -613,6 +617,7 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         border_width: 1.0,
         border_color: palette.primary.strong.color,
         text_color: None,
+        shadow: Shadow::default(),
     };
 
     match status {
@@ -623,8 +628,13 @@ pub fn default(theme: &Theme, status: Status) -> Style {
             ..active
         },
         Status::Focused { .. } => Style {
-            border_color: palette.primary.strong.color,
+            border_color: palette::focus_border_color(
+                Color::TRANSPARENT,
+                palette.background.base.text,
+                palette.primary.strong.color,
+            ),
             border_width: 2.0,
+            shadow: palette::focus_shadow(palette.primary.strong.color),
             ..active
         },
     }

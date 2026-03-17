@@ -46,8 +46,8 @@ use crate::core::widget::operation::focusable::{self, Focusable};
 use crate::core::widget::tree::{self, Tree};
 use crate::core::window;
 use crate::core::{
-    Background, Border, Color, Element, Event, Layout, Length, Pixels, Rectangle, Shell, Size,
-    Theme, Widget,
+    Background, Border, Color, Element, Event, Layout, Length, Pixels, Rectangle, Shadow, Shell,
+    Size, Theme, Widget,
 };
 
 /// A box that can be checked.
@@ -461,6 +461,7 @@ where
                 renderer::Quad {
                     bounds,
                     border: style.border,
+                    shadow: style.shadow,
                     ..renderer::Quad::default()
                 },
                 style.background,
@@ -614,6 +615,8 @@ pub struct Style {
     pub icon_color: Color,
     /// The [`Border`] of the checkbox.
     pub border: Border,
+    /// The [`Shadow`] of the checkbox.
+    pub shadow: Shadow,
     /// The text [`Color`] of the checkbox.
     pub text_color: Option<Color>,
 }
@@ -674,13 +677,16 @@ pub fn primary(theme: &Theme, status: Status) -> Style {
                 palette.primary.base,
                 is_checked,
             );
+            let widget_pair = if is_checked { palette.primary.base } else { palette.background.base };
+            let accent = palette.primary.strong.color;
 
             Style {
                 border: Border {
-                    color: palette.primary.strong.color,
+                    color: palette::focus_border_color(widget_pair.color, widget_pair.text, accent),
                     width: 2.0,
                     ..base.border
                 },
+                shadow: palette::focus_shadow(accent),
                 ..base
             }
         }
@@ -721,13 +727,16 @@ pub fn secondary(theme: &Theme, status: Status) -> Style {
                 palette.background.strong,
                 is_checked,
             );
+            let widget_pair = if is_checked { palette.background.strong } else { palette.background.base };
+            let accent = palette.primary.strong.color;
 
             Style {
                 border: Border {
-                    color: palette.primary.strong.color,
+                    color: palette::focus_border_color(widget_pair.color, widget_pair.text, accent),
                     width: 2.0,
                     ..base.border
                 },
+                shadow: palette::focus_shadow(accent),
                 ..base
             }
         }
@@ -768,13 +777,16 @@ pub fn success(theme: &Theme, status: Status) -> Style {
                 palette.success.base,
                 is_checked,
             );
+            let widget_pair = if is_checked { palette.success.base } else { palette.background.base };
+            let accent = palette.primary.strong.color;
 
             Style {
                 border: Border {
-                    color: palette.primary.strong.color,
+                    color: palette::focus_border_color(widget_pair.color, widget_pair.text, accent),
                     width: 2.0,
                     ..base.border
                 },
+                shadow: palette::focus_shadow(accent),
                 ..base
             }
         }
@@ -815,13 +827,16 @@ pub fn danger(theme: &Theme, status: Status) -> Style {
                 palette.danger.base,
                 is_checked,
             );
+            let widget_pair = if is_checked { palette.danger.base } else { palette.background.base };
+            let accent = palette.primary.strong.color;
 
             Style {
                 border: Border {
-                    color: palette.primary.strong.color,
+                    color: palette::focus_border_color(widget_pair.color, widget_pair.text, accent),
                     width: 2.0,
                     ..base.border
                 },
+                shadow: palette::focus_shadow(accent),
                 ..base
             }
         }
@@ -856,6 +871,7 @@ fn styled(
             width: 1.0,
             color: border,
         },
+        shadow: Shadow::default(),
         text_color: None,
     }
 }

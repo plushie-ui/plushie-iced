@@ -40,9 +40,10 @@ use crate::core::widget::operation::accessible::{Accessible, Role, Value};
 use crate::core::widget::operation::focusable::Focusable;
 use crate::core::widget::tree::{self, Tree};
 use crate::core::window;
+use crate::core::theme::palette;
 use crate::core::{
-    self, Background, Color, Element, Event, Layout, Length, Pixels, Point, Rectangle, Shell, Size,
-    Theme, Widget,
+    self, Background, Color, Element, Event, Layout, Length, Pixels, Point, Rectangle, Shadow,
+    Shell, Size, Theme, Widget,
 };
 
 use std::ops::RangeInclusive;
@@ -577,6 +578,7 @@ where
                     width: style.handle.border_width,
                     color: style.handle.border_color,
                 },
+                shadow: style.handle.shadow,
                 ..renderer::Quad::default()
             },
             style.handle.background,
@@ -705,6 +707,8 @@ pub struct Handle {
     pub border_width: f32,
     /// The border [`Color`] of the handle.
     pub border_color: Color,
+    /// The [`Shadow`] of the handle.
+    pub shadow: Shadow,
 }
 
 /// The shape of the handle of a slider.
@@ -802,9 +806,16 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         Status::Dragged => palette.primary.weak.color,
     };
 
-    let (handle_border_color, handle_border_width) = match status {
-        Status::Focused => (palette.primary.strong.color, 2.0),
-        _ => (Color::TRANSPARENT, 0.0),
+    let (handle_border_color, handle_border_width, handle_shadow) = match status {
+        Status::Focused => {
+            let accent = palette.primary.strong.color;
+            (
+                palette::focus_border_color(color, palette.primary.base.text, accent),
+                2.0,
+                palette::focus_shadow(accent),
+            )
+        }
+        _ => (Color::TRANSPARENT, 0.0, Shadow::default()),
     };
 
     Style {
@@ -822,6 +833,7 @@ pub fn default(theme: &Theme, status: Status) -> Style {
             background: color.into(),
             border_color: handle_border_color,
             border_width: handle_border_width,
+            shadow: handle_shadow,
         },
     }
 }

@@ -44,9 +44,10 @@ use crate::core::widget::operation::accessible::{Accessible, Role};
 use crate::core::widget::operation::focusable::{self, Focusable};
 use crate::core::widget::tree::{self, Tree};
 use crate::core::window;
+use crate::core::theme::palette;
 use crate::core::{
-    Background, Border, Color, Element, Event, Layout, Length, Pixels, Rectangle, Shell, Size,
-    Theme, Widget,
+    Background, Border, Color, Element, Event, Layout, Length, Pixels, Rectangle, Shadow, Shell,
+    Size, Theme, Widget,
 };
 
 /// A toggler widget.
@@ -520,6 +521,7 @@ where
                     width: style.background_border_width,
                     color: style.background_border_color,
                 },
+                shadow: style.shadow,
                 ..renderer::Quad::default()
             },
             style.background,
@@ -625,6 +627,8 @@ pub struct Style {
     pub border_radius: Option<border::Radius>,
     /// The ratio of separation between the background and the toggle in relative height.
     pub padding_ratio: f32,
+    /// The [`Shadow`] of the toggler.
+    pub shadow: Shadow,
 }
 
 /// The theme catalog of a [`Toggler`].
@@ -705,6 +709,11 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         _ => (0.0, Color::TRANSPARENT),
     };
 
+    let shadow = match status {
+        Status::Focused { .. } => palette::focus_shadow(palette.primary.strong.color),
+        _ => Shadow::default(),
+    };
+
     Style {
         background: background.into(),
         foreground: foreground.into(),
@@ -715,6 +724,7 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         text_color: None,
         border_radius: None,
         padding_ratio: 0.1,
+        shadow,
     }
 }
 

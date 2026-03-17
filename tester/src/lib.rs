@@ -873,6 +873,7 @@ where
                             background: Color::TRANSPARENT.into(),
                             border_width: 0.0,
                             border_color: Color::TRANSPARENT,
+                            shadow: core::Shadow::default(),
                         },
                     }
                 })

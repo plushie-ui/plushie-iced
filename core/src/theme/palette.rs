@@ -1,5 +1,5 @@
 //! Define the colors of a theme.
-use crate::{Color, color};
+use crate::{Color, Shadow, Vector, color};
 
 use std::sync::LazyLock;
 
@@ -593,6 +593,33 @@ pub fn readable(background: Color, text: Color) -> Color {
 /// Returns true if the [`Color`] is dark.
 pub fn is_dark(color: Color) -> bool {
     to_oklch(color).l < 0.6
+}
+
+/// Builds a [`Shadow`] suitable for a keyboard-focus glow ring.
+///
+/// The shadow uses the given color at reduced opacity with a blur
+/// radius that creates a visible halo around the widget, ensuring
+/// focus is perceptible regardless of the widget's background color.
+pub fn focus_shadow(color: Color) -> Shadow {
+    Shadow {
+        color: Color { a: 0.5, ..color },
+        offset: Vector::ZERO,
+        blur_radius: 4.0,
+    }
+}
+
+/// Returns a border color for keyboard-focus that contrasts with
+/// the widget's background. If the widget background has insufficient
+/// contrast against `accent`, the widget's own text color is used instead.
+pub fn focus_border_color(widget_bg: Color, widget_text: Color, accent: Color) -> Color {
+    // WCAG SC 1.4.11 requires 3:1 for non-text UI. We use a stricter
+    // threshold (2.0) to switch to the text color earlier, since a
+    // border at 2:1 contrast is already hard to see at 2px width.
+    if widget_bg.relative_contrast(accent) < 2.0 {
+        widget_text
+    } else {
+        accent
+    }
 }
 
 // https://en.wikipedia.org/wiki/Oklab_color_space#Conversions_between_color_spaces

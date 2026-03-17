@@ -57,9 +57,10 @@ use crate::core::widget::operation::accessible::{Accessible, Role, Value as Acce
 use crate::core::widget::operation::{self, Operation};
 use crate::core::widget::tree::{self, Tree};
 use crate::core::window;
+use crate::core::theme::palette;
 use crate::core::{
     Alignment, Background, Border, Color, Element, Event, InputMethod, Layout, Length, Padding,
-    Pixels, Point, Rectangle, Shell, Size, Theme, Vector, Widget,
+    Pixels, Point, Rectangle, Shadow, Shell, Size, Theme, Vector, Widget,
 };
 
 /// A field that can be filled with text.
@@ -450,6 +451,7 @@ where
             renderer::Quad {
                 bounds,
                 border: style.border,
+                shadow: style.shadow,
                 ..renderer::Quad::default()
             },
             style.background,
@@ -1654,6 +1656,8 @@ pub struct Style {
     pub value: Color,
     /// The [`Color`] of the selection of the text input.
     pub selection: Color,
+    /// The [`Shadow`] of the text input.
+    pub shadow: Shadow,
 }
 
 /// The theme catalog of a [`TextInput`].
@@ -1700,6 +1704,7 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         placeholder: palette.secondary.base.color,
         value: palette.background.base.text,
         selection: palette.primary.weak.color,
+        shadow: Shadow::default(),
     };
 
     match status {
@@ -1714,8 +1719,10 @@ pub fn default(theme: &Theme, status: Status) -> Style {
         Status::Focused { .. } => Style {
             border: Border {
                 color: palette.primary.strong.color,
+                width: 2.0,
                 ..active.border
             },
+            shadow: palette::focus_shadow(palette.primary.strong.color),
             ..active
         },
         Status::Disabled => Style {
