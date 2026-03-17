@@ -1263,15 +1263,13 @@ async fn run_instance<P>(
                                     // Plain Tab respects modal scope when present.
                                     #[cfg(feature = "a11y")]
                                     let tab_handled = match window.modal_scope {
-                                        Some(ref scope) => {
-                                            runtime::keyboard::handle_tab_within(
-                                                &event,
-                                                status,
-                                                ui,
-                                                &window.renderer,
-                                                scope.clone(),
-                                            )
-                                        }
+                                        Some(ref scope) => runtime::keyboard::handle_tab_within(
+                                            &event,
+                                            status,
+                                            ui,
+                                            &window.renderer,
+                                            scope.clone(),
+                                        ),
                                         None => runtime::keyboard::handle_tab(
                                             &event,
                                             status,
@@ -1292,12 +1290,13 @@ async fn run_instance<P>(
                                         ui,
                                         &window.renderer,
                                     ) || tab_handled
-                                    || runtime::keyboard::handle_scroll_keys(
-                                        &event,
-                                        status,
-                                        ui,
-                                        &window.renderer,
-                                    ) {
+                                        || runtime::keyboard::handle_scroll_keys(
+                                            &event,
+                                            status,
+                                            ui,
+                                            &window.renderer,
+                                        )
+                                    {
                                         window.raw.request_redraw();
                                         continue;
                                     }

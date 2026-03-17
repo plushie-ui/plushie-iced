@@ -364,12 +364,16 @@ impl editor::Editor for Editor {
                 Action::SelectWord => {
                     let cursor = internal.editor.cursor();
 
-                    internal.editor.set_selection(cosmic_text::Selection::Word(cursor));
+                    internal
+                        .editor
+                        .set_selection(cosmic_text::Selection::Word(cursor));
                 }
                 Action::SelectLine => {
                     let cursor = internal.editor.cursor();
 
-                    internal.editor.set_selection(cosmic_text::Selection::Line(cursor));
+                    internal
+                        .editor
+                        .set_selection(cosmic_text::Selection::Line(cursor));
                 }
                 Action::SelectAll => {
                     let editor = &mut internal.editor;
@@ -908,11 +912,7 @@ impl Internal {
     }
 
     /// Restore a snapshot into the editor.
-    fn restore_snapshot(
-        &mut self,
-        snapshot: &Snapshot,
-        font_system: &mut cosmic_text::FontSystem,
-    ) {
+    fn restore_snapshot(&mut self, snapshot: &Snapshot, font_system: &mut cosmic_text::FontSystem) {
         let buffer = buffer_mut_from_editor(&mut self.editor);
 
         buffer.set_text(

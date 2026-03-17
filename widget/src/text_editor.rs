@@ -116,6 +116,7 @@ where
     class: Theme::Class<'a>,
     key_binding: Option<Box<dyn Fn(KeyPress) -> Option<Binding<Message>> + 'a>>,
     on_edit: Option<Box<dyn Fn(Action) -> Message + 'a>>,
+    purpose: Option<input_method::Purpose>,
     highlighter_settings: Highlighter::Settings,
     highlighter_format: fn(&Highlighter::Highlight, &Theme) -> highlighter::Format<Renderer::Font>,
     last_status: Option<Status>,
@@ -144,6 +145,7 @@ where
             class: <Theme as Catalog>::default(),
             key_binding: None,
             on_edit: None,
+            purpose: None,
             highlighter_settings: (),
             highlighter_format: |_highlight, _theme| highlighter::Format::default(),
             last_status: None,
@@ -277,6 +279,7 @@ where
             class: self.class,
             key_binding: self.key_binding,
             on_edit: self.on_edit,
+            purpose: self.purpose,
             highlighter_settings: settings,
             highlighter_format: to_format,
             last_status: self.last_status,
@@ -309,6 +312,12 @@ where
     #[must_use]
     pub fn class(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
+        self
+    }
+
+    /// Sets the IME [`input_method::Purpose`] of the [`TextEditor`].
+    pub fn input_purpose(mut self, purpose: input_method::Purpose) -> Self {
+        self.purpose = Some(purpose);
         self
     }
 
@@ -345,7 +354,7 @@ where
 
         InputMethod::Enabled {
             cursor: Rectangle::new(position, Size::new(1.0, f32::from(line_height))),
-            purpose: input_method::Purpose::Normal,
+            purpose: self.purpose.unwrap_or(input_method::Purpose::Normal),
             preedit: state.preedit.as_ref().map(input_method::Preedit::as_ref),
         }
     }

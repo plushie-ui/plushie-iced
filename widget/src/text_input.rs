@@ -103,6 +103,7 @@ where
     pub(crate) placeholder: String,
     value: Value,
     is_secure: bool,
+    purpose: Option<input_method::Purpose>,
     font: Option<Renderer::Font>,
     width: Length,
     padding: Padding,
@@ -134,6 +135,7 @@ where
             placeholder: String::from(placeholder),
             value: Value::new(value),
             is_secure: false,
+            purpose: None,
             font: None,
             width: Length::Fill,
             padding: DEFAULT_PADDING,
@@ -158,6 +160,14 @@ where
     /// Converts the [`TextInput`] into a secure password input.
     pub fn secure(mut self, is_secure: bool) -> Self {
         self.is_secure = is_secure;
+        self
+    }
+
+    /// Sets the IME [`input_method::Purpose`] of the [`TextInput`].
+    ///
+    /// This overrides the default purpose derived from [`Self::secure`].
+    pub fn input_purpose(mut self, purpose: input_method::Purpose) -> Self {
+        self.purpose = Some(purpose);
         self
     }
 
@@ -399,11 +409,11 @@ where
                 Point::new(x, text_bounds.y),
                 Size::new(1.0, text_bounds.height),
             ),
-            purpose: if self.is_secure {
+            purpose: self.purpose.unwrap_or(if self.is_secure {
                 input_method::Purpose::Secure
             } else {
                 input_method::Purpose::Normal
-            },
+            }),
             preedit: state.preedit.as_ref().map(input_method::Preedit::as_ref),
         }
     }

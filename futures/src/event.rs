@@ -69,4 +69,3 @@ where
         subscription::Event::SystemThemeChanged(_) => None,
     })
 }
-
