@@ -113,3 +113,11 @@ pub fn select_range<T>(id: impl Into<Id>, start: usize, end: usize) -> Task<T> {
         end,
     )))
 }
+
+/// Returns the [`Id`] of the currently focused widget, if any.
+///
+/// The resulting [`Task`] produces the focused widget's [`Id`].
+/// If no widget is focused, the task produces no value.
+pub fn find_focused() -> Task<Id> {
+    task::widget(operation::focusable::find_focused())
+}
