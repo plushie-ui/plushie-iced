@@ -339,8 +339,21 @@ impl<P: Program + 'static> Emulator<P> {
                     }
                 }
 
-                let (_state, _status) =
+                let (_state, statuses) =
                     user_interface.update(&events, self.cursor, &mut self.renderer, &mut messages);
+
+                for (event, status) in events.iter().zip(statuses.iter().copied()) {
+                    let _ = runtime::keyboard::handle_ctrl_tab(
+                        event,
+                        &mut user_interface,
+                        &self.renderer,
+                    ) || runtime::keyboard::handle_tab(
+                        event,
+                        status,
+                        &mut user_interface,
+                        &self.renderer,
+                    );
+                }
 
                 self.cache = Some(user_interface.into_cache());
 
