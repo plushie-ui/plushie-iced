@@ -121,21 +121,16 @@ pub fn select_range<T>(id: impl Into<Id>, start: usize, end: usize) -> Task<T> {
 /// most widget operations (which produce no value on miss) because
 /// callers need to distinguish "nothing focused" from "still waiting."
 pub fn find_focused() -> Task<Option<Id>> {
-    use crate::core::widget::operation::{Focusable, Outcome};
-    use crate::core::widget::Operation;
     use crate::core::Rectangle;
+    use crate::core::widget::Operation;
+    use crate::core::widget::operation::{Focusable, Outcome};
 
     struct FindFocusedOption {
         focused: Option<Id>,
     }
 
     impl Operation<Option<Id>> for FindFocusedOption {
-        fn focusable(
-            &mut self,
-            id: Option<&Id>,
-            _bounds: Rectangle,
-            state: &mut dyn Focusable,
-        ) {
+        fn focusable(&mut self, id: Option<&Id>, _bounds: Rectangle, state: &mut dyn Focusable) {
             if state.is_focused() {
                 self.focused = id.cloned();
             }
