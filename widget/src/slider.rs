@@ -755,47 +755,6 @@ impl Catalog for Theme {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::core::widget::operation::focusable::Focusable;
-
-    #[test]
-    fn focusable_trait() {
-        let mut state = State::default();
-        assert!(!state.is_focused());
-        assert!(!state.focus_visible);
-        state.focus();
-        assert!(state.is_focused());
-        assert!(state.focus_visible);
-        state.unfocus();
-        assert!(!state.is_focused());
-        assert!(!state.focus_visible);
-    }
-
-    #[test]
-    fn default_state_not_focused() {
-        let state = State::default();
-        assert!(!state.is_focused);
-        assert!(!state.is_dragging);
-        assert!(!state.focus_visible);
-    }
-
-    #[test]
-    fn focus_independent_of_drag() {
-        let mut state = State::default();
-
-        state.focus();
-        assert!(!state.is_dragging);
-
-        state.is_dragging = true;
-        assert!(state.is_focused());
-
-        state.unfocus();
-        assert!(state.is_dragging);
-    }
-}
-
 /// The default style of a [`Slider`].
 pub fn default(theme: &Theme, status: Status) -> Style {
     let palette = theme.palette();
@@ -836,5 +795,46 @@ pub fn default(theme: &Theme, status: Status) -> Style {
             border_width: handle_border_width,
             shadow: handle_shadow,
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::widget::operation::focusable::Focusable;
+
+    #[test]
+    fn focusable_trait() {
+        let mut state = State::default();
+        assert!(!state.is_focused());
+        assert!(!state.focus_visible);
+        state.focus();
+        assert!(state.is_focused());
+        assert!(state.focus_visible);
+        state.unfocus();
+        assert!(!state.is_focused());
+        assert!(!state.focus_visible);
+    }
+
+    #[test]
+    fn default_state_not_focused() {
+        let state = State::default();
+        assert!(!state.is_focused);
+        assert!(!state.is_dragging);
+        assert!(!state.focus_visible);
+    }
+
+    #[test]
+    fn focus_independent_of_drag() {
+        let mut state = State::default();
+
+        state.focus();
+        assert!(!state.is_dragging);
+
+        state.is_dragging = true;
+        assert!(state.is_focused());
+
+        state.unfocus();
+        assert!(state.is_dragging);
     }
 }
