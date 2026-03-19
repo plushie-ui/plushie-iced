@@ -135,7 +135,7 @@ where
 /// Handle Ctrl+Tab / Ctrl+Shift+Tab for focus navigation within a scope.
 ///
 /// Behaves like [`handle_ctrl_tab`] but restricts focus cycling to widgets
-/// that are descendants of the container with the given `scope` [`Id`].
+/// that are descendants of the container with the given `scope` [`Id`](core::widget::Id).
 ///
 /// Returns `true` if the event was consumed.
 pub fn handle_ctrl_tab_within<Message, Theme, Renderer>(
@@ -164,7 +164,7 @@ where
 /// Handle uncaptured Tab / Shift+Tab for focus navigation within a scope.
 ///
 /// Behaves like [`handle_tab`] but restricts focus cycling to widgets
-/// that are descendants of the container with the given `scope` [`Id`].
+/// that are descendants of the container with the given `scope` [`Id`](core::widget::Id).
 ///
 /// Returns `true` if the event was consumed.
 pub fn handle_tab_within<Message, Theme, Renderer>(
