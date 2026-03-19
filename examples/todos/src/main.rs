@@ -225,7 +225,7 @@ impl Todos {
                     })
                 };
 
-                let content = column![title, input, controls, tasks]
+                let content = column![title, input, tasks, controls]
                     .spacing(20)
                     .max_width(800);
 

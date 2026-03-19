@@ -15,5 +15,8 @@ type space
 expect "2 tasks left"
 type escape
 type tab
+type tab
+type tab
+type tab
 type space
 expect "1 task left"

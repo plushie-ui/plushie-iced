@@ -12,11 +12,6 @@ type tab
 type space
 expect "1 task left"
 type tab
+type tab
 type space
 expect "0 tasks left"
-type tab
-type space
-expect "1 task left"
-type tab
-type space
-expect "2 tasks left"

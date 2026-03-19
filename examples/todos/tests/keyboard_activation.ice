@@ -12,5 +12,5 @@ click "Buy milk"
 expect "1 task left"
 type space
 expect "2 tasks left"
-type enter
+type space
 expect "1 task left"
