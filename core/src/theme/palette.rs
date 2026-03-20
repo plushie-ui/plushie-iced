@@ -602,7 +602,7 @@ pub fn is_dark(color: Color) -> bool {
 /// [`focus_border_color`] to adjust the border for widgets whose
 /// background matches the base focus color.
 pub fn focus_color(accent: Color, page_bg: Color) -> Color {
-    if page_bg.relative_contrast(accent) >= 2.0 {
+    if page_bg.relative_contrast(accent) >= 3.0 {
         accent
     } else if is_dark(page_bg) {
         Color::WHITE
@@ -623,7 +623,7 @@ pub fn focus_border_color(widget_bg: Color, accent: Color, page_bg: Color) -> Co
     let base = focus_color(accent, page_bg);
 
     // Transparent widgets sit on the page -- base already contrasts.
-    if widget_bg.a < 0.1 || widget_bg.relative_contrast(base) >= 1.5 {
+    if widget_bg.a < 0.1 || widget_bg.relative_contrast(base) >= 3.0 {
         return base;
     }
 
