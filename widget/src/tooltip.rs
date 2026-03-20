@@ -32,6 +32,7 @@ use crate::core::renderer;
 use crate::core::text;
 use crate::core::time::{Duration, Instant};
 use crate::core::widget::operation::Focusable;
+use crate::core::widget::operation::accessible::{Accessible, Role};
 use crate::core::widget::{self, Widget};
 use crate::core::window;
 use crate::core::{Element, Event, Length, Padding, Pixels, Point, Rectangle, Shell, Size, Vector};
@@ -66,6 +67,7 @@ where
 {
     content: Element<'a, Message, Theme, Renderer>,
     tooltip: Element<'a, Message, Theme, Renderer>,
+    tooltip_text: Option<String>,
     position: Position,
     gap: f32,
     padding: f32,
@@ -93,6 +95,7 @@ where
         Tooltip {
             content: content.into(),
             tooltip: tooltip.into(),
+            tooltip_text: None,
             position,
             gap: 0.0,
             padding: Self::DEFAULT_PADDING,
@@ -125,6 +128,16 @@ where
     /// Sets whether the [`Tooltip`] is snapped within the viewport.
     pub fn snap_within_viewport(mut self, snap: bool) -> Self {
         self.snap_within_viewport = snap;
+        self
+    }
+
+    /// Sets the accessible text for the tooltip.
+    ///
+    /// When set, a [`Role::Tooltip`] node carrying this text is added
+    /// to the accessibility tree as a sibling of the child widget.
+    /// Screen readers can discover it to provide additional context.
+    pub fn tooltip_text(mut self, text: impl Into<String>) -> Self {
+        self.tooltip_text = Some(text.into());
         self
     }
 
@@ -376,6 +389,18 @@ where
                 renderer,
                 operation,
             );
+
+            if let Some(ref text) = self.tooltip_text {
+                operation.accessible(
+                    None,
+                    layout.bounds(),
+                    &Accessible {
+                        role: Role::Tooltip,
+                        label: Some(text.as_str()),
+                        ..Accessible::default()
+                    },
+                );
+            }
         });
 
         // After the main operation (which may have changed focus), check
