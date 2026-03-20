@@ -70,6 +70,7 @@ pub struct Image<Handle = image::Handle> {
     expand: bool,
     alt: Option<String>,
     description: Option<String>,
+    decorative: bool,
 }
 
 impl<Handle> Image<Handle> {
@@ -89,6 +90,7 @@ impl<Handle> Image<Handle> {
             expand: false,
             alt: None,
             description: None,
+            decorative: false,
         }
     }
 
@@ -197,6 +199,15 @@ impl<Handle> Image<Handle> {
     /// assistive technology, when the alt text alone is not sufficient.
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
+        self
+    }
+
+    /// Marks the [`Image`] as decorative.
+    ///
+    /// Decorative images are hidden from assistive technology. Screen
+    /// readers will skip them entirely.
+    pub fn decorative(mut self) -> Self {
+        self.decorative = true;
         self
     }
 }
@@ -429,6 +440,7 @@ where
                 role: Role::Image,
                 label: self.alt.as_deref(),
                 description: self.description.as_deref(),
+                hidden: self.decorative,
                 ..Accessible::default()
             },
         );

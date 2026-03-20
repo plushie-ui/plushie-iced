@@ -68,6 +68,7 @@ where
     status: Option<Status>,
     alt: Option<String>,
     description: Option<String>,
+    decorative: bool,
 }
 
 impl<'a, Theme> Svg<'a, Theme>
@@ -87,6 +88,7 @@ where
             status: None,
             alt: None,
             description: None,
+            decorative: false,
         }
     }
 
@@ -170,6 +172,15 @@ where
     /// assistive technology, when the alt text alone is not sufficient.
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
+        self
+    }
+
+    /// Marks the [`Svg`] as decorative.
+    ///
+    /// Decorative images are hidden from assistive technology. Screen
+    /// readers will skip them entirely.
+    pub fn decorative(mut self) -> Self {
+        self.decorative = true;
         self
     }
 }
@@ -307,6 +318,7 @@ where
                 role: Role::Image,
                 label: self.alt.as_deref(),
                 description: self.description.as_deref(),
+                hidden: self.decorative,
                 ..Accessible::default()
             },
         );
