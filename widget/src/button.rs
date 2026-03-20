@@ -83,6 +83,7 @@ where
     height: Length,
     padding: Padding,
     clip: bool,
+    label: Option<String>,
     class: Theme::Class<'a>,
     status: Option<Status>,
 }
@@ -118,6 +119,7 @@ where
             height: size.height.fluid(),
             padding: DEFAULT_PADDING,
             clip: false,
+            label: None,
             class: Theme::default(),
             status: None,
         }
@@ -175,6 +177,15 @@ where
     /// overflow.
     pub fn clip(mut self, clip: bool) -> Self {
         self.clip = clip;
+        self
+    }
+
+    /// Sets the accessible label for the [`Button`].
+    ///
+    /// This overrides the label derived from child content. Useful for
+    /// icon-only buttons that have no text child.
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
         self
     }
 
@@ -277,6 +288,7 @@ where
             layout.bounds(),
             &Accessible {
                 role: Role::Button,
+                label: self.label.as_deref(),
                 disabled: self.on_press.is_none(),
                 ..Accessible::default()
             },
