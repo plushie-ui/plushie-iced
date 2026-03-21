@@ -149,7 +149,6 @@ where
     message_: PhantomData<Message>,
     theme_: PhantomData<Theme>,
     renderer_: PhantomData<Renderer>,
-    last_mouse_interaction: Option<mouse::Interaction>,
 }
 
 impl<P, Message, Theme, Renderer> Canvas<P, Message, Theme, Renderer>
@@ -170,7 +169,6 @@ where
             message_: PhantomData,
             theme_: PhantomData,
             renderer_: PhantomData,
-            last_mouse_interaction: None,
         }
     }
 
@@ -205,11 +203,16 @@ where
 }
 
 /// Canvas-level widget state wrapping the Program's state with focus
-/// tracking. The Program receives `&mut S` and never sees this wrapper.
+/// tracking and redraw suppression. The Program receives `&mut S` and
+/// never sees this wrapper.
 #[derive(Debug)]
 struct CanvasWidgetState<S: Default + 'static> {
     program: S,
     is_focused: bool,
+    /// Last mouse interaction reported by the Program. Used to detect
+    /// changes and request redraws. Lives here (not on the Canvas widget
+    /// struct) because the widget is rebuilt every frame by view().
+    last_mouse_interaction: Option<mouse::Interaction>,
 }
 
 impl<S: Default + 'static> Default for CanvasWidgetState<S> {
@@ -217,6 +220,7 @@ impl<S: Default + 'static> Default for CanvasWidgetState<S> {
         Self {
             program: S::default(),
             is_focused: false,
+            last_mouse_interaction: None,
         }
     }
 }
@@ -284,11 +288,11 @@ where
         let is_redraw_request =
             matches!(event, Event::Window(window::Event::RedrawRequested(_now)),);
 
-        // Only forward keyboard events to the Program when the canvas
-        // is focused in iced's focus system. Mouse events always pass
-        // through regardless of focus state.
-        let is_keyboard = matches!(event, Event::Keyboard(_));
-        if is_keyboard && !widget_state.is_focused {
+        // Only forward keyboard and IME events to the Program when the
+        // canvas is focused in iced's focus system. Mouse events always
+        // pass through regardless of focus state.
+        let is_keyboard_like = matches!(event, Event::Keyboard(_) | Event::InputMethod(_));
+        if is_keyboard_like && !widget_state.is_focused {
             return;
         }
 
@@ -313,11 +317,14 @@ where
             let mouse_interaction =
                 self.mouse_interaction(tree, layout, cursor, viewport, renderer);
 
+            let widget_state = tree
+                .state
+                .downcast_mut::<CanvasWidgetState<P::State>>();
             if is_redraw_request {
-                self.last_mouse_interaction = Some(mouse_interaction);
-            } else if self
+                widget_state.last_mouse_interaction = Some(mouse_interaction);
+            } else if widget_state
                 .last_mouse_interaction
-                .is_some_and(|last_mouse_interaction| last_mouse_interaction != mouse_interaction)
+                .is_some_and(|last| last != mouse_interaction)
             {
                 shell.request_redraw();
             }
@@ -400,6 +407,10 @@ where
         // has interactive elements that need keyboard access.
         if self.program.is_focusable(&widget_state.program) {
             operation.focusable(None, bounds, widget_state);
+        } else {
+            // Program no longer accepts focus (e.g., interactive shapes
+            // were removed). Clear the flag so keyboard events stop.
+            widget_state.is_focused = false;
         }
 
         // Accessible child nodes via the Program.
