@@ -50,7 +50,7 @@
 //! ```
 mod program;
 
-pub use program::Program;
+pub use program::{AccessibleShape, Program};
 
 pub use crate::Action;
 pub use crate::core::event::Event;
@@ -323,14 +323,15 @@ where
 
     fn operate(
         &mut self,
-        _tree: &mut Tree,
+        tree: &mut Tree,
         layout: Layout<'_>,
         _renderer: &Renderer,
         operation: &mut dyn widget::Operation,
     ) {
+        let bounds = layout.bounds();
         operation.accessible(
             None,
-            layout.bounds(),
+            bounds,
             &Accessible {
                 role: Role::Image,
                 label: self.alt.as_deref(),
@@ -338,6 +339,33 @@ where
                 ..Accessible::default()
             },
         );
+
+        // Emit accessible child nodes for interactive shapes.
+        let state = tree.state.downcast_ref::<P::State>();
+        let children = self.program.accessible_shapes(state, bounds);
+        if !children.is_empty() {
+            operation.traverse(&mut |child_op| {
+                for shape in &children {
+                    // Offset shape bounds by the canvas position.
+                    let shape_bounds = Rectangle {
+                        x: bounds.x + shape.bounds.x,
+                        y: bounds.y + shape.bounds.y,
+                        width: shape.bounds.width,
+                        height: shape.bounds.height,
+                    };
+                    child_op.accessible(
+                        None,
+                        shape_bounds,
+                        &Accessible {
+                            role: shape.role,
+                            label: shape.label.as_deref(),
+                            description: shape.description.as_deref(),
+                            ..Accessible::default()
+                        },
+                    );
+                }
+            });
+        }
     }
 }
 

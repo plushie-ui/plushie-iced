@@ -2,7 +2,25 @@ use crate::Action;
 use crate::canvas::mouse;
 use crate::canvas::{Event, Geometry};
 use crate::core::Rectangle;
+use crate::core::widget::operation::accessible::Role;
 use crate::graphics::geometry;
+
+/// An accessible child node within a canvas, returned by
+/// [`Program::accessible_shapes`].
+///
+/// Canvas programs with interactive shapes return these so the canvas
+/// widget can emit accessible child nodes in its `operate()` method.
+#[derive(Debug, Clone)]
+pub struct AccessibleShape {
+    /// Bounds of the shape within the canvas (canvas-local coordinates).
+    pub bounds: Rectangle,
+    /// Semantic role (e.g. Button, Link, Slider).
+    pub role: Role,
+    /// Human-readable label.
+    pub label: Option<String>,
+    /// Longer description.
+    pub description: Option<String>,
+}
 
 /// The state and logic of a [`Canvas`].
 ///
@@ -70,6 +88,22 @@ where
     ) -> mouse::Interaction {
         mouse::Interaction::default()
     }
+
+    /// Returns accessible child nodes within the canvas.
+    ///
+    /// Called by the canvas widget's `operate()` method to emit
+    /// accessibility information for interactive shapes. Each returned
+    /// [`AccessibleShape`] becomes a focusable child node under the
+    /// canvas in the accessibility tree.
+    ///
+    /// By default, returns an empty list (no accessible children).
+    fn accessible_shapes(
+        &self,
+        _state: &Self::State,
+        _canvas_bounds: Rectangle,
+    ) -> Vec<AccessibleShape> {
+        Vec::new()
+    }
 }
 
 impl<Message, Theme, Renderer, T> Program<Message, Theme, Renderer> for &T
@@ -107,5 +141,13 @@ where
         cursor: mouse::Cursor,
     ) -> mouse::Interaction {
         T::mouse_interaction(self, state, bounds, cursor)
+    }
+
+    fn accessible_shapes(
+        &self,
+        state: &Self::State,
+        canvas_bounds: Rectangle,
+    ) -> Vec<AccessibleShape> {
+        T::accessible_shapes(self, state, canvas_bounds)
     }
 }
