@@ -1237,10 +1237,12 @@ async fn run_instance<P>(
                                 user_interface::State::Updated {
                                     redraw_request: _redraw_request,
                                     mouse_interaction,
+                                    input_method,
                                     clipboard: clipboard_requests,
                                     ..
                                 } => {
                                     window.update_mouse(mouse_interaction);
+                                    window.request_input_method(input_method);
 
                                     #[cfg(not(feature = "unconditional-rendering"))]
                                     window.request_redraw(_redraw_request);
