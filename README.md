@@ -20,8 +20,11 @@ are independent of upstream iced releases.
 - Tooltip and table (Row, Cell, ColumnHeader) roles
 - RadioGroup widget with proper radio group semantics
   (single Tab stop, arrow key navigation, active descendant tracking)
-- Canvas `operate_accessible()` and `is_focusable()` for
-  shape-level a11y and keyboard focus
+- Canvas `operate_accessible()`, `is_focusable()`, and
+  `active_descendant_id()` for element-level a11y and keyboard focus
+- Canvas click-to-focus and focus lifecycle callbacks
+  (`on_focus_gained`, `on_focus_lost`)
+- Canvas widget ID, configurable role, and active descendant support
 - Form validation, modal, busy, hidden, and read-only properties
 - Alt-key mnemonics mapped to AccessKit keyboard shortcuts
 

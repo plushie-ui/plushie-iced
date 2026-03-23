@@ -9,6 +9,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Canvas: click-to-focus -- clicking inside a focusable canvas grants
+  iced-level focus (matching text_input behavior)
+- Canvas: `on_focus_gained()` / `on_focus_lost()` callbacks on the
+  `Program` trait for focus lifecycle notifications
+- Canvas: `active_descendant_id()` on `Program` trait -- dynamically
+  resolves the focused child element for accessibility
+- Canvas: `.id()` builder for widget ID (enables `Command.focus(id)` targeting)
+- Canvas: `.role()` builder for configurable accessible role
+- Canvas: `.active_descendant()` builder for static active descendant
+- `process_actions` helper function for draining `Vec<Action>` through a Shell
+
+### Changed
+
+- Canvas `operate()` resolves `active_descendant` dynamically from
+  `Program::active_descendant_id()`, falling back to the static field
+
 ## [0.7.0] - 2026-03-21
 
 ### Added
