@@ -22,6 +22,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Canvas: `.active_descendant()` builder for static active descendant
 - `process_actions` helper function for draining `Vec<Action>` through a Shell
 
+### Fixed
+
+- Button: clear focus on external click even when the event was captured
+  by a sibling widget. Fixes dual focus indicators and Tab going to the
+  wrong widget after clicking a text field.
+
 ### Changed
 
 - Canvas `operate()` resolves `active_descendant` dynamically from

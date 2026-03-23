@@ -331,6 +331,20 @@ where
             viewport,
         );
 
+        // Clear focus when any mouse click happens elsewhere -- even if the
+        // event was captured by a sibling widget. Without this, the button
+        // retains keyboard focus visuals after clicking a text_input.
+        if matches!(
+            event,
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
+                | Event::Touch(touch::Event::FingerPressed { .. })
+        ) && !cursor.is_over(layout.bounds())
+        {
+            let state = tree.state.downcast_mut::<State>();
+            state.is_focused = false;
+            state.focus_visible = false;
+        }
+
         if shell.is_event_captured() {
             return;
         }
@@ -346,10 +360,8 @@ where
                     state.focus_visible = false;
 
                     shell.capture_event();
-                } else {
-                    state.is_focused = false;
-                    state.focus_visible = false;
                 }
+                // else: already handled above (before capture check)
             }
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
             | Event::Touch(touch::Event::FingerLifted { .. }) => {
