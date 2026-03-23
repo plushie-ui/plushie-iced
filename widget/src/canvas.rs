@@ -480,7 +480,13 @@ where
         let bounds = layout.bounds();
         let widget_state = tree.state.downcast_mut::<CanvasWidgetState<P::State>>();
 
-        // Canvas-level accessible node.
+        // Canvas-level accessible node. The active_descendant is resolved
+        // dynamically from the Program's state (focused element ID) rather
+        // than from the static Canvas struct field, so it stays in sync
+        // with keyboard navigation.
+        let dynamic_active_desc = self
+            .program
+            .active_descendant_id(&widget_state.program);
         operation.accessible(
             self.id.as_ref(),
             bounds,
@@ -488,7 +494,9 @@ where
                 role: self.role.unwrap_or(Role::Image),
                 label: self.alt.as_deref(),
                 description: self.description.as_deref(),
-                active_descendant: self.active_descendant.as_ref(),
+                active_descendant: dynamic_active_desc
+                    .as_ref()
+                    .or(self.active_descendant.as_ref()),
                 ..Accessible::default()
             },
         );

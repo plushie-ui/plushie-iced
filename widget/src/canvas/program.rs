@@ -99,6 +99,16 @@ where
         vec![]
     }
 
+    /// Return the widget ID of the currently active child element for
+    /// accessibility. Called during `operate()` to set `active_descendant`
+    /// on the canvas's accessible node. Screen readers use this to
+    /// announce which child has focus in a composite widget.
+    ///
+    /// By default, returns `None` (no active descendant).
+    fn active_descendant_id(&self, _state: &Self::State) -> Option<widget::Id> {
+        None
+    }
+
     /// Emit accessible child nodes within the canvas.
     ///
     /// Called by the canvas widget's `operate()` method inside a
@@ -168,6 +178,10 @@ where
 
     fn on_focus_lost(&self, state: &mut Self::State) -> Vec<Action<Message>> {
         T::on_focus_lost(self, state)
+    }
+
+    fn active_descendant_id(&self, state: &Self::State) -> Option<widget::Id> {
+        T::active_descendant_id(self, state)
     }
 
     fn operate_accessible(
