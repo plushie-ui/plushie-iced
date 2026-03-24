@@ -342,8 +342,13 @@ ID resolution like `labelled_by`.
 and selected but not edited. Distinct from `disabled`: read-only
 widgets are navigable and their values can be copied.
 
-**`busy: bool`** -- Set to `true` when the widget is loading or
-processing. The screen reader announces "busy."
+**`busy: bool`** -- Maps to WAI-ARIA `aria-busy`. When true,
+assistive technology suppresses announcements for this node until
+busy clears, then announces the final state. Sliders set this
+automatically during drag to prevent rapid-fire value
+announcements (see `slider.rs` and `vertical_slider.rs`). Custom
+widgets with continuous value changes should do the same during
+their active interaction phase.
 
 **`hidden: bool`** -- Set to `true` to hide the widget from assistive
 technology. Used to hide background content when a modal dialog is

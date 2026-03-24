@@ -276,6 +276,11 @@ where
                     step: Some(self.step.into()),
                 }),
                 orientation: Some(Orientation::Horizontal),
+                // Set aria-busy during drag so assistive technology
+                // suppresses rapid value announcements and announces
+                // only the final value on release. See WAI-ARIA
+                // aria-busy specification.
+                busy: state.is_dragging,
                 ..Accessible::default()
             },
         );
