@@ -41,12 +41,14 @@ pub use clipboard::Clipboard;
 pub use error::Error;
 pub use proxy::Proxy;
 
+#[cfg(feature = "hinting")]
+use crate::core::Renderer;
 use crate::core::mouse;
 use crate::core::renderer;
 use crate::core::theme;
 use crate::core::time::Instant;
 use crate::core::widget::operation;
-use crate::core::{Point, Renderer, Size};
+use crate::core::{Point, Size};
 use crate::futures::futures::channel::mpsc;
 use crate::futures::futures::channel::oneshot;
 use crate::futures::futures::task;
@@ -65,6 +67,7 @@ use window::WindowManager;
 
 use rustc_hash::FxHashMap;
 use std::borrow::Cow;
+use std::collections::VecDeque;
 use std::mem::ManuallyDrop;
 use std::slice;
 use std::sync::Arc;
@@ -149,7 +152,7 @@ where
     let context = task::Context::from_waker(task::noop_waker_ref());
 
     struct Runner<Message: 'static, F> {
-        instance: std::pin::Pin<Box<F>>,
+        instance: Option<std::pin::Pin<Box<F>>>,
         context: task::Context<'static>,
         id: Option<String>,
         sender: mpsc::UnboundedSender<Event<Action<Message>>>,
@@ -162,7 +165,7 @@ where
     }
 
     let runner = Runner {
-        instance,
+        instance: Some(instance),
         context,
         id: settings.id,
         sender: event_sender,
@@ -266,10 +269,19 @@ where
                 return;
             }
 
-            self.sender.start_send(event).expect("Send event");
+            let mut pending = VecDeque::from([event]);
 
             loop {
-                let poll = self.instance.as_mut().poll(&mut self.context);
+                while let Some(event) = pending.pop_front() {
+                    self.sender.start_send(event).expect("Send event");
+                }
+
+                let Some(instance) = self.instance.as_mut() else {
+                    event_loop.exit();
+                    break;
+                };
+
+                let poll = instance.as_mut().poll(&mut self.context);
 
                 match poll {
                     task::Poll::Pending => match self.receiver.try_recv() {
@@ -386,27 +398,23 @@ where
                                     &title,
                                 ));
 
-                                self.process_event(
-                                    event_loop,
-                                    Event::WindowCreated {
-                                        id,
-                                        window,
-                                        exit_on_close_request,
-                                        make_visible: visible,
-                                        on_open,
-                                        #[cfg(feature = "a11y")]
-                                        adapter,
-                                    },
-                                );
+                                pending.push_back(Event::WindowCreated {
+                                    id,
+                                    window,
+                                    exit_on_close_request,
+                                    make_visible: visible,
+                                    on_open,
+                                    #[cfg(feature = "a11y")]
+                                    adapter,
+                                });
                             }
                             Control::Exit => {
-                                self.process_event(event_loop, Event::Exit);
-                                event_loop.exit();
-                                break;
+                                pending.push_back(Event::Exit);
                             }
                             Control::Crash(error) => {
                                 self.error = Some(error);
                                 event_loop.exit();
+                                break;
                             }
                             Control::SetAutomaticWindowTabbing(_enabled) => {
                                 #[cfg(target_os = "macos")]
@@ -421,6 +429,7 @@ where
                         }
                     },
                     task::Poll::Ready(_) => {
+                        self.instance = None;
                         event_loop.exit();
                         break;
                     }
