@@ -9,6 +9,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-04-02
+
+### Changed
+
+- **Breaking:** `mouse_area`: All event callbacks changed from
+  `Option<Message>` to `Option<Box<dyn Fn(Point) -> Message>>`.
+  Callers must wrap messages in closures: `.on_press(Message::Click)`
+  becomes `.on_press(|_| Message::Click)`. `on_scroll` changed from
+  `Fn(ScrollDelta) -> Message` to `Fn(ScrollDelta, Point) -> Message`.
+  Both changes provide cursor position relative to the area bounds,
+  enabling the renderer to include coordinates on all pointer events.
+
+### Merged from upstream (iced-rs/iced)
+
+- Fix `pane_grid` drawing picked pane twice
+- Fix RTL relayout being skipped for single-line text
+- Use `Overlay` to draw picked pane in `pane_grid`
+- Make `Oklch` type public
+- Fix `objc2` panic on macOS Tahoe
+- Add scale factor to window opened event
+- Add `finish` and `recall` methods to `iced_wgpu::Renderer`
+
 ## [0.8.0] - 2026-03-23
 
 ### Added

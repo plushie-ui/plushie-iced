@@ -164,7 +164,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Héctor Ramón Jiménez <hector@hecrj.dev>", "Daniel Hedlund <daniel@digitree.org>"]
 edition = "2024"
 license = "MIT"
@@ -175,24 +175,24 @@ keywords = ["gui", "ui", "graphics", "interface", "accessibility"]
 rust-version = "1.92"
 
 [workspace.dependencies]
-iced = { version = "0.8.0", path = ".", package = "plushie-iced" }
-iced_beacon = { version = "0.8.0", path = "beacon", package = "plushie-iced-beacon" }
-iced_core = { version = "0.8.0", path = "core", package = "plushie-iced-core" }
-iced_debug = { version = "0.8.0", path = "debug", package = "plushie-iced-debug" }
-iced_devtools = { version = "0.8.0", path = "devtools", package = "plushie-iced-devtools" }
-iced_futures = { version = "0.8.0", path = "futures", package = "plushie-iced-futures" }
-iced_graphics = { version = "0.8.0", path = "graphics", package = "plushie-iced-graphics" }
-iced_highlighter = { version = "0.8.0", path = "highlighter", package = "plushie-iced-highlighter" }
-iced_program = { version = "0.8.0", path = "program", package = "plushie-iced-program" }
-iced_renderer = { version = "0.8.0", path = "renderer", package = "plushie-iced-renderer" }
-iced_runtime = { version = "0.8.0", path = "runtime", package = "plushie-iced-runtime" }
-iced_selector = { version = "0.8.0", path = "selector", package = "plushie-iced-selector" }
-iced_test = { version = "0.8.0", path = "test", package = "plushie-iced-test" }
-iced_tester = { version = "0.8.0", path = "tester", package = "plushie-iced-tester" }
-iced_tiny_skia = { version = "0.8.0", path = "tiny_skia", default-features = false, package = "plushie-iced-tiny-skia" }
-iced_wgpu = { version = "0.8.0", path = "wgpu", default-features = false, package = "plushie-iced-wgpu" }
-iced_widget = { version = "0.8.0", path = "widget", package = "plushie-iced-widget" }
-iced_winit = { version = "0.8.0", path = "winit", default-features = false, package = "plushie-iced-winit" }
+iced = { version = "0.8.1", path = ".", package = "plushie-iced" }
+iced_beacon = { version = "0.8.1", path = "beacon", package = "plushie-iced-beacon" }
+iced_core = { version = "0.8.1", path = "core", package = "plushie-iced-core" }
+iced_debug = { version = "0.8.1", path = "debug", package = "plushie-iced-debug" }
+iced_devtools = { version = "0.8.1", path = "devtools", package = "plushie-iced-devtools" }
+iced_futures = { version = "0.8.1", path = "futures", package = "plushie-iced-futures" }
+iced_graphics = { version = "0.8.1", path = "graphics", package = "plushie-iced-graphics" }
+iced_highlighter = { version = "0.8.1", path = "highlighter", package = "plushie-iced-highlighter" }
+iced_program = { version = "0.8.1", path = "program", package = "plushie-iced-program" }
+iced_renderer = { version = "0.8.1", path = "renderer", package = "plushie-iced-renderer" }
+iced_runtime = { version = "0.8.1", path = "runtime", package = "plushie-iced-runtime" }
+iced_selector = { version = "0.8.1", path = "selector", package = "plushie-iced-selector" }
+iced_test = { version = "0.8.1", path = "test", package = "plushie-iced-test" }
+iced_tester = { version = "0.8.1", path = "tester", package = "plushie-iced-tester" }
+iced_tiny_skia = { version = "0.8.1", path = "tiny_skia", default-features = false, package = "plushie-iced-tiny-skia" }
+iced_wgpu = { version = "0.8.1", path = "wgpu", default-features = false, package = "plushie-iced-wgpu" }
+iced_widget = { version = "0.8.1", path = "widget", package = "plushie-iced-widget" }
+iced_winit = { version = "0.8.1", path = "winit", default-features = false, package = "plushie-iced-winit" }
 
 accesskit = "0.24"
 accesskit_winit = "0.32.2"
@@ -203,7 +203,7 @@ bytemuck = { version = "1.0", features = ["derive"] }
 bytes = "1.6"
 cargo-hot = { version = "0.1", package = "cargo-hot-protocol" }
 cosmic-text = "0.18"
-cryoglyph = { version = "0.8.0", path = "cryoglyph", package = "plushie-iced-cryoglyph" }
+cryoglyph = { version = "0.8.1", path = "cryoglyph", package = "plushie-iced-cryoglyph" }
 futures = { version = "0.3", default-features = false, features = ["std", "async-await"] }
 glam = "0.25"
 guillotiere = "0.6"

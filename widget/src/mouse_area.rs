@@ -368,9 +368,7 @@ fn update<Message: Clone, Theme, Renderer>(
         return;
     }
 
-    let local_position = cursor
-        .position_in(layout.bounds())
-        .unwrap_or(Point::ORIGIN);
+    let local_position = cursor.position_in(layout.bounds()).unwrap_or(Point::ORIGIN);
 
     match event {
         Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
