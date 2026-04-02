@@ -214,7 +214,7 @@ where
                     ..container::Style::default()
                 }
             }))
-            .on_press(on_blur)
+            .on_press(move |_| on_blur.clone())
         )
     ]
     .into()

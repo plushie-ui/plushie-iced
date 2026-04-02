@@ -548,7 +548,7 @@ impl Viewer {
                     })
                     .padding(20),
             )
-            .on_press(Message::Close),
+            .on_press(|_| Message::Close),
         ))
     }
 }
