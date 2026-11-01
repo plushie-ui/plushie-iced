@@ -288,6 +288,8 @@ fn convert_role(role: IcedRole) -> Role {
         IcedRole::Label => Role::Label,
         IcedRole::Link => Role::Link,
         IcedRole::List => Role::List,
+        IcedRole::ListBox => Role::ListBox,
+        IcedRole::ListBoxOption => Role::ListBoxOption,
         IcedRole::ListItem => Role::ListItem,
         IcedRole::Menu => Role::Menu,
         IcedRole::MenuBar => Role::MenuBar,
@@ -2530,6 +2532,8 @@ mod tests {
         assert_eq!(convert_role(IcedRole::Heading), Role::Heading);
         assert_eq!(convert_role(IcedRole::Label), Role::Label);
         assert_eq!(convert_role(IcedRole::List), Role::List);
+        assert_eq!(convert_role(IcedRole::ListBox), Role::ListBox);
+        assert_eq!(convert_role(IcedRole::ListBoxOption), Role::ListBoxOption);
         assert_eq!(convert_role(IcedRole::ListItem), Role::ListItem);
         assert_eq!(convert_role(IcedRole::MenuBar), Role::MenuBar);
         assert_eq!(convert_role(IcedRole::Meter), Role::Meter);
