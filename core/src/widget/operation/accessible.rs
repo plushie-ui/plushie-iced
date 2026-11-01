@@ -56,6 +56,13 @@ pub enum Role {
     Link,
     /// A list container.
     List,
+    /// A list whose items can be selected (the ARIA listbox pattern).
+    ///
+    /// Windows only reports "x of y" for items whose container is a
+    /// selection container, and a plain [`List`](Self::List) is not one.
+    ListBox,
+    /// A selectable item within a [`ListBox`](Self::ListBox).
+    ListBoxOption,
     /// An item within a list.
     ListItem,
     /// A menu container.
